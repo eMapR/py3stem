@@ -1,0 +1,13 @@
+Parameters for confusion_matrix.py
+
+p_path; /vol/v3/ben_ak/param_files_rgi/southern_region/models/2001_06032020/06032020_models_2001_vote.tif
+t_path; /vol/v3/ben_ak/raster_files/nlcd/NLCD_2001_epsg_3338_southern_region.tif
+sample_txt; /vol/v3/ben_ak/param_files_rgi/southern_region/stem_random_samples/glaciers_proportional_146788_20200602_1109/glaciers_proportional_146788_20200602_1109.txt
+target_col; landcover
+bins; 10:11, 11:12, 20:21, 21:22, 22:23, 23:24, 30:31, 40:41, 41:42, 42:43, 51:52, 70:71, 80:81, 81:82, 89:90, 94:95
+p_nodata; 255
+t_nodata; 255
+
+Optional parameters
+out_txt; /vol/v3/ben_ak/param_files_rgi/southern_region/error_analysis/06032020_confusion_matrix_output.txt
+match; best

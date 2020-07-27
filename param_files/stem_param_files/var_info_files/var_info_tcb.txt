@@ -1,0 +1,19 @@
+var_name	data_type	data_band	search_str	basepath	by_tile	nodata	path_filter
+elevation	continuous	1	*_AK_30m_southern_region_resampled_cubic_temp.tif	/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/output_tiles_southern_30m/	1
+curvature	continuous	1	*_AK_30m_southern_region_resampled_cubic_curvature_temp.tif	/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/output_tiles_southern_30m/	1
+n_aspect_intes	continuous	1	*_AK_30m_southern_region_resampled_cubic_aspect_intensity_north_temp.tif	/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/output_tiles_southern_30m/	1
+s_aspect_intes	continuous	1	*_AK_30m_southern_region_resampled_cubic_aspect_intensity_south_temp.tif	/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/output_tiles_southern_30m/	1
+tcb_summer_rmse	continuous	1	LTV3_tcb_*_*_11_*_rmse.tif	/vol/v3/ben_ak/gee_outputs/gee_files_tcb_cnd_2000_2019_southern_region/tcb_07210920/	1
+tcb_summer_ndsi	continuous	1	LTV3_tcb_*_*_11_*_ftv_ndsi.tif	/vol/v3/ben_ak/gee_outputs/gee_files_tcb_cnd_2000_2019_southern_region/tcb_07210920/	1
+tcb_summer_tcb	continuous	1	LTV3_tcb_*_*_11_*_ftv_tcb.tif	/vol/v3/ben_ak/gee_outputs/gee_files_tcb_cnd_2000_2019_southern_region/tcb_07210920/	1
+tcb_summer_tcw	continuous	1	LTV3_tcb_*_*_11_*_ftv_tcw.tif	/vol/v3/ben_ak/gee_outputs/gee_files_tcb_cnd_2000_2019_southern_region/tcb_07210920/	1
+tcb_summer_ndvi	continuous	1	LTV3_tcb_*_*_11_*_ftv_ndvi.tif	/vol/v3/ben_ak/gee_outputs/gee_files_tcb_cnd_2000_2019_southern_region/tcb_07210920/	1
+tcb_summer_nbr	continuous	1	LTV3_tcb_*_*_11_*_ftv_nbr.tif	/vol/v3/ben_ak/gee_outputs/gee_files_tcb_cnd_2000_2019_southern_region/tcb_07210920/	1
+
+
+
+
+
+
+
+

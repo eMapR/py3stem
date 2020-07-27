@@ -1,0 +1,10 @@
+{
+	
+"shapefile_path" = "path/to/shapefile",
+"simple_shp_path" = "path/to/simplified/boundary/shapefile",
+"write_to_path" = "path/to/output/directory",
+"cell_size" = "grid cell size- AK is 50000",
+"out_epsg" = "EPSG:3338",
+"gee_rows" = "rows in your GEE output file- for AK this is 2",
+"gee_cols" = "cols in your GEE output file- for AK this is 15"
+}

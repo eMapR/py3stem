@@ -1,0 +1,8 @@
+{
+"chunkDir": "/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/processed",
+"outDir": "/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/output_tiles_southern_30m",
+"tileFile": "/vol/v3/ben_ak/vector_files/stem_processing/rgi_cnd_tiles_southern_region_revised.geojson",
+"name": "AK_30m_southern_region_resampled_cubic",
+"nodata": "-10000",
+"proj": "EPSG:3338"
+}

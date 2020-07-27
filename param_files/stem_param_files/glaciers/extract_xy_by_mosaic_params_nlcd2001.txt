@@ -1,0 +1,9 @@
+mosaic_path; /vol/v3/ben_ak/vector_files/stem_processing/rgi_cnd_tiles_southern_region_revised.shp
+xy_txt; /vol/v3/ben_ak/param_files_rgi/southern_region/stem_random_samples/glaciers_proportional_179978_20200727_1356/glaciers_proportional_179978_20200727_1356.txt
+var_info; /vol/v3/ben_ak/param_files_rgi/southern_region/var_info_files/var_info_ndsi.txt
+years; 2001
+target_col; glaciers
+out_dir; /vol/v3/ben_ak/param_files_rgi/southern_region/stem_random_samples/glaciers_proportional_179978_20200727_1356/
+
+Optional Parameters
+n_jobs; 25

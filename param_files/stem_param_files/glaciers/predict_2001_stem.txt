@@ -1,0 +1,14 @@
+model_dir; /vol/v3/ben_ak/param_files_rgi/southern_region/random_forest/glaciers_20200723_1159/
+train_params; /vol/v3/ben_ak/param_files_rgi/southern_region/random_forest/glaciers_20200723_1159/train_stem_params_nlcd2001.txt
+var_info; /vol/v3/ben_ak/param_files_rgi/southern_region/var_info_files/var_info_tcb.txt
+mosaic_path; /vol/v3/ben_ak/vector_files/stem_processing/rgi_cnd_tiles_southern_region_revised.shp
+support_size; 150000, 150000
+n_tiles; 60, 90
+nodata; 255
+out_dir; /vol/v3/ben_ak/param_files_rgi/southern_region/models/2001/
+
+agg_stats; vote, count, oob_rate, mean,stdv,pct_vote,median
+
+Optional Parameters
+n_jobs; 1
+overwrite_tiles; False

@@ -1,0 +1,7 @@
+var_name	data_type	data_band	search_str	basepath	by_tile	nodata	path_filter
+ndsi_summer_rmse	continuous	1	LTV3_ndsi_07210920_*_11_*_rmse.tif	/vol/v3/ben_ak/gee_outputs/gee_files/ndsi_2000_2019_2_yr_clip_decompose/ndsi_07210920/	1
+ndsi_summer_ndsi	continuous	1	LTV3_ndsi_07210920_*_11_*_ftv_ndsi.tif	/vol/v3/ben_ak/gee_outputs/gee_files_ndsi_2000_2019_2_yr_clip_decompose_out/ndsi_07210920/	1
+ndsi_summer_ndvi	continuous	1	LTV3_ndsi_07210920_*_11_*_ftv_ndvi.tif	/vol/v3/ben_ak/gee_outputs/gee_files_ndsi_2000_2019_2_yr_clip_decompose_out/ndsi_07210920/	1
+ndsi_summer_tcb	continuous	1	LTV3_ndsi_07210920_*_11_*_ftv_tcb.tif	/vol/v3/ben_ak/gee_outputs/gee_files_ndsi_2000_2019_2_yr_clip_decompose_out/ndsi_07210920/	1
+ndsi_summer_tcw	continuous	1	LTV3_ndsi_07210920_*_11_*_ftv_tcw.tif	/vol/v3/ben_ak/gee_outputs/gee_files_ndsi_2000_2019_2_yr_clip_decompose_out/ndsi_07210920/	1
+ndsi_summer_nbr	continuous	1	LTV3_ndsi_07210920_*_11_*_ftv_nbr.tif	/vol/v3/ben_ak/gee_outputs/gee_files_ndsi_2000_2019_2_yr_clip_decompose_out/ndsi_07210920/	1

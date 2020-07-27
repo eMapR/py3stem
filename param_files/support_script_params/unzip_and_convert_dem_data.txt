@@ -1,0 +1,11 @@
+{
+"unzip_filepath": "/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/downloads/",
+"in_filepath": "/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/processed/AK_5m_original_mosaic_southern_region.tif",
+"out_filepath": "/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/processed/",
+"temp_dest": "/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/temp_files/",
+"input_shp_1": "/vol/v3/ben_ak/vector_files/ifsar_processing/rgi_ifsar_processing_southern_region.shp",
+"input_shp_2": "/vol/v3/ben_ak/vector_files/ifsar_processing/rgi_cnd_tiles_northern_region_dissolve.shp",
+"epsg": "EPSG:3338", 
+"region": "southern",
+"resolution": "500"
+}

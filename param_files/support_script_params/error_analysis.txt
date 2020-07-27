@@ -1,0 +1,24 @@
+{
+"shapefile": "/vol/v3/ben_ak/vector_files/stem_processing/northern_region_10000m_grid.shp",
+"resolution": "30",
+"output_dir":"/vol/v3/ben_ak/vector_files/stem_processing/", 
+"pickle_dir":"/vol/v3/ben_ak/param_files/script_params/",  
+"rgi_raster":"/vol/v3/ben_ak/raster_files/output_layers/rgi_reprojected_epsg_3338_binary.tif",
+"nlcd_raster":"/vol/v3/ben_ak/raster_files/nlcd/NLCD_2001_epsg_3338_northern_region_disagreement_areas.tif", 
+"stem_raster": "/vol/v3/ben_ak/raster_files/output_layers/stem_outputs/06062020_model_run_southern_region_binary_glaciers_merged.tif", 
+"hist_raster":"/vol/v3/ben_ak/raster_files/glacier_velocity/2001_gte_5_reprojected_epsg_3338_30m.tif", 
+"boundary":"/vol/v3/ben_ak/vector_files/alaska_bounds_buffer1000_epsg3338.shp", 
+"zoom":"/vol/v3/ben_ak/vector_files/ifsar_processing/rgi_cnd_tiles_northern_region_dissolve.shp", 
+"random_pts":"/vol/v3/ben_ak/vector_files/error_assessment/southern_region_1100_pts_rgi_2000-2004.shp",
+"write_to_pickle":"true", 
+"stat":"majority", 
+"actual_source":"rgi", 
+"predicted_source":"stem", 
+"model_run":"06062020", 
+"nlcd_version":"binary", 
+"reclass_value":"2",
+"modifier":"1100_pts_merged_southern_region"
+}
+
+
+

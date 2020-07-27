@@ -1,0 +1,17 @@
+sample_txt; /vol/v3/ben_ak/param_files_rgi/southern_region/stem_random_samples/glaciers_proportional_179978_20200727_1356/glaciers_proportional_179978_20200727_1356_predictors.txt
+target_col; glaciers
+mosaic_path; /vol/v3/ben_ak/vector_files/stem_processing/rgi_cnd_tiles_southern_region_revised.shp
+var_info; /vol/v3/ben_ak/param_files_rgi/southern_region/var_info_files/var_info_ndsi.txt
+cell_size; 30000, 30000
+support_size; 150000, 150000
+sets_per_cell; 4
+gsrd_shp;  /vol/v3/ben_ak/vector_files/stem_processing/rgi_cnd_tiles_southern_region_revised.shp
+min_obs; 100
+model_type; classifier
+out_dir; /vol/v3/ben_ak/param_files_rgi/southern_region/random_forest
+
+Optional parameters
+make_oob_map; True
+
+oob_map_metric; oob_rate
+n_jobs; 1

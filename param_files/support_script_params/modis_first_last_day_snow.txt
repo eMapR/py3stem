@@ -1,0 +1,15 @@
+{
+"climate_regions": "/vol/v3/ben_ak/vector_files/ak_climate_regions/individual_regions/",
+"input_directory": "/vol/v2/ak_glaciers/modis_first_last_day_snow/climate_regions/",
+"modis_directory": "/vol/v2/ak_glaciers/modis_first_last_day_snow/modis_clips/", 
+"dem": "/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/processed/AK_500m_southern_region_resampled_cubic.tif",
+"resolution": "500",
+"output_directory":"/vol/v2/ak_glaciers/modis_first_last_day_snow/masks/", 
+"make_rasters":"true",
+"write_to_pickle":"true",
+"pickle_directory":"/vol/v2/ak_glaciers/modis_first_last_day_snow/pickles/", 
+"variable":"first_day_mean"
+
+
+}
+
