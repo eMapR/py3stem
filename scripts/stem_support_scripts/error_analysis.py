@@ -238,7 +238,8 @@ def reclassify(input_raster,nlcd_version,reclass_value):
 	output_file = input_raster[:-4]+'_reclassify.tif'
 	with rasterio.open(output_file, 'w', **profile) as dst: 
 		dst.write(arr)
-
+class generate_pts(): 
+	pass
 def main(): 
 	params = sys.argv[1]
 	with open(str(params)) as f:
