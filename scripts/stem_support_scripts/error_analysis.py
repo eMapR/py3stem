@@ -30,7 +30,7 @@ def rasterize(shp,resolution,output_dest):
 	output_raster = output_dest+tail[:-4]+'.tif'
 	print(output_raster)
 	ds = gdal.Rasterize(output_raster, shp, xRes=pixel_size, yRes=pixel_size, 
-	                    burnValues=255, outputBounds=[xmin, ymin, xmax, ymax], 
+	                    burnValues=1, outputBounds=[xmin, ymin, xmax, ymax], 
 	                    outputType=gdal.GDT_Byte)
 	ds = None
 	return output_raster
@@ -219,7 +219,21 @@ def reclassify(input_raster,nlcd_version,reclass_value):
 		elif nlcd_version.lower() =='binary': 
 			#this is for binary rasters
 			arr[np.where(arr==1)] = reclass_value
-			
+		#use if you want to assign your own dictionary with key being the original value and value being the remapped value
+		elif nlcd_version.lower() == 'user': 
+			try: 
+				input_dict = dict(map(lambda x: x.split(':'), reclass_value.split(',')))  
+				input_dict = {int(k):int(v) for k,v in input_dict.items()}
+
+				print(input_dict)
+			except ValueError: 
+				try: 
+					input_dict = dict(map(lambda x: x.split(':'), reclass_value.split(', '))) 
+					input_dict = {int(k):int(v) for k,v in input_dict.items()}
+				except ValueError: 
+					print('It looks like your formatting is incorrect. Please check that values are added as key:value, or key:value, ')
+			for k,v in input_dict.items(): 
+				arr[np.where(arr==k)] = v 
 
 	output_file = input_raster[:-4]+'_reclassify.tif'
 	with rasterio.open(output_file, 'w', **profile) as dst: 
@@ -250,13 +264,16 @@ def main():
 		nlcd_version = variables["nlcd_version"]
 		modifier = variables["modifier"]
 		reclass_value = variables["reclass_value"]
-	reclassify(rgi_raster,nlcd_version,reclass_value)
+		reclass_dict = variables["reclass_dict"]
+		
+
+	#reclassify(rgi_raster,nlcd_version,reclass_dict)
 	#nlcd_disagree_summary(stem_raster)
 	#create_zonal_stats_df(stem_raster,rgi_raster,shapefile,resolution,output_dir,boundary,zoom,pickle_dir,write_to_pickle,stat)
 	#calc_zonal_stats(nlcd_raster,random_pts,resolution,stat,'nlcd')
 	#calc_confusion_matrix(rgi_raster,stem_raster,random_pts,resolution,stat,actual_source,predicted_source,model_run,write_to_pickle,pickle_dir,modifier)
 	#extract_raster_pts(nlcd_raster,random_pts,resolution)
-	#rasterize(shapefile,resolution,output_directory)
+	rasterize(shapefile,resolution,output_dir)
 if __name__ == '__main__':
 	main()
 
