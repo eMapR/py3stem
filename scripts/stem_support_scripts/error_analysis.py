@@ -19,6 +19,10 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report 
 #from sklearn.metrics import plot_confusion_matrix
 import seaborn as sns
+import xarray as xr
+import dask
+from datetime import datetime
+
 def rasterize(shp,resolution,output_dest): 
 	"""Convert vector to raster."""
 	input_shp = ogr.Open(shp)
@@ -58,15 +62,7 @@ def calc_zonal_stats(raster,shp,resolution,stat,source):
 	
 	#print(output_geodf)
 	return output_geodf
-	# def extract_raster_pts(input_raster,input_shp,resolution): 
-	# 	"""Extract raster pixel values at random pts for error analysis."""
-	# 	geo_df = gpd.read_file(input_shp)
-	# 	with rasterio.open(input_raster) as src:
-	# 		#transform = (src.bounds[0],resolution,0.0,src.bounds[3],0.0,-1*resolution)
-	# 		#arr = src.read(1)
-	# 	pts = zonal_stats(input_shp, input_raster,stats='majority',nodata=255,band=1)
-	# 	print(pts)
-
+	
 
 def read_pickles(*argv): 
 	#head,tail = os.path.split(raster_2)
@@ -239,7 +235,53 @@ def reclassify(input_raster,nlcd_version,reclass_value):
 	with rasterio.open(output_file, 'w', **profile) as dst: 
 		dst.write(arr)
 class generate_pts(): 
-	pass
+	"""A class to hold functions for cleaning a raster and then generating random points for stratified random sampling."""
+
+	def __init__(self,input_raster,dif_raster): 
+		self.input_raster=input_raster
+		self.dif_raster=dif_raster
+	def pad_raster(self): 
+		"""Make a difference raster that is not filled with nodata values."""
+		#first get the compilation of the three categories and pad it 
+		with rasterio.open(self.input_raster) as src1:#, open(self.dif_raster) as src2: 
+			target_shape = xr.open_rasterio(src1).shape
+		with rasterio.open(self.dif_raster) as src2: 
+			#dif_arr = src2.read()
+			#dif_arr_subset = dif_arr[np.where(dif_arr>0)]#((dif_arr > 0) * dif_arr).dropna()
+			# print(target_shape)	
+			# 	# input_arr = xr.open_rasterio(src1)
+			# 	# print(input_arr.shape)
+			dif_arr = (xr.open_rasterio(src2,chunks=(1,(2917*5),(5761*5)))) 
+			#dif_arr_subset = ((dif_arr > 0) * dif_arr)
+			dif_arr_subset = (dif_arr.where(dif_arr>0,drop=True))
+			# #print(dif_arr_subset.shape)
+			print(dif_arr)
+			print(dif_arr.chunks)
+			print(dif_arr_subset.shape)
+
+	def fix_nodata(self): 
+		"""Change large areas of nodata to a usable value."""
+		#src = xarray.open_rasterio(self.input_raster)
+		with rasterio.open(self.input_raster) as src1: 
+			# arr = xr.open_rasterio(src)
+			arr = src.read()
+			profile = src.profile
+			arr[np.where(arr==-3.4028235e+38)] = -999
+			# nodata_val = (arr.nodatavals)[0] #get the built in nodata value 
+			# #convert native nodata value to -9999
+			# arr=arr.where(arr == nodata_val,other=-9999)
+			# #arr=arr.where(arr.y == nodata_val,other=-9999)
+			# # mean_value = dask.compute(arr.max(dim=['x','y']))
+			# # print(mean_value.item())
+			# print(profile)
+			# print(arr.nodatavals[0])
+			# print(arr.x,arr.y)
+			# print(arr.values)
+			print(arr)
+		return arr 
+	def select_random_pts_from_raster(self):
+		pass
+
 def main(): 
 	params = sys.argv[1]
 	with open(str(params)) as f:
@@ -266,8 +308,11 @@ def main():
 		modifier = variables["modifier"]
 		reclass_value = variables["reclass_value"]
 		reclass_dict = variables["reclass_dict"]
-		
-	select_random_pts_from_raster()
+	t0 = datetime.now()
+	test = generate_pts(rgi_raster,stem_raster)
+	test.pad_raster()
+	t1 = datetime.now()
+	print((t1-t0)/60)
 	#reclassify(rgi_raster,nlcd_version,reclass_dict)
 	#nlcd_disagree_summary(stem_raster)
 	#create_zonal_stats_df(stem_raster,rgi_raster,shapefile,resolution,output_dir,boundary,zoom,pickle_dir,write_to_pickle,stat)
@@ -278,31 +323,3 @@ def main():
 if __name__ == '__main__':
 	main()
 
-#   "/vol/v3/ben_ak/param_files_rgi/southern_region/models/2001_06032020/models_2001_vote.tif",
-#"/vol/v3/ben_ak/param_files_rgi/southern_region/models/2001_06062020_updated_nlcd/06062020_model_run_updated_nlcd.tif",
-# arr[np.where(arr==7)] = 7
-# arr[np.where(arr==9)] = 12
-# arr[np.where(arr==7)] = 7
-# arr[np.where(arr==7)] = 7
-# arr[np.where(arr==7)] = 7
-# arr[np.where(arr==7)] = 7
-# arr[np.where(arr==7)] = 7
-# arr[np.where(arr==7)] = 7
-# arr[np.where(arr==7)] = 7
-# arr[np.where(arr==7)] = 7
-# arr[np.where(arr==7)] = 7
-
-#arr[np.where(arr==1)] = 9 
-# arr[np.where(arr==11)] = 7
-# arr[np.where(arr==12)] = 9
-# arr[np.where(arr==22)] = 18
-# arr[np.where(arr==31)] = 27
-# arr[np.where(arr==41)] = 36
-# arr[np.where(arr==42)] = 38
-# arr[np.where(arr==43)] = 46
-# arr[np.where(arr==51)] = 48
-# arr[np.where(arr==52)] = 56
-# arr[np.where(arr==71)] = 67
-# arr[np.where(arr==72)] = 78
-# arr[np.where(arr==90)] = 87
-# arr[np.where(arr==95)] = 92
