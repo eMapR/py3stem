@@ -22,6 +22,11 @@ import seaborn as sns
 import xarray as xr
 import dask
 from datetime import datetime
+import geopandas as gpd 
+from random import seed
+from random import randint
+import random
+from affine import Affine
 
 def rasterize(shp,resolution,output_dest): 
 	"""Convert vector to raster."""
@@ -243,45 +248,84 @@ class generate_pts():
 	def pad_raster(self): 
 		"""Make a difference raster that is not filled with nodata values."""
 		#first get the compilation of the three categories and pad it 
-		with rasterio.open(self.input_raster) as src1:#, open(self.dif_raster) as src2: 
-			target_shape = xr.open_rasterio(src1).shape
+		
 		with rasterio.open(self.dif_raster) as src2: 
-			#dif_arr = src2.read()
-			#dif_arr_subset = dif_arr[np.where(dif_arr>0)]#((dif_arr > 0) * dif_arr).dropna()
-			# print(target_shape)	
-			# 	# input_arr = xr.open_rasterio(src1)
-			# 	# print(input_arr.shape)
 			dif_arr = (xr.open_rasterio(src2,chunks=(1,(2917*5),(5761*5)))) 
-			#dif_arr_subset = ((dif_arr > 0) * dif_arr)
-			dif_arr_subset = (dif_arr.where(dif_arr>0,drop=True))
-			# #print(dif_arr_subset.shape)
-			print(dif_arr)
-			print(dif_arr.chunks)
-			print(dif_arr_subset.shape)
+			dif_arr_subset = (dif_arr.where(dif_arr>0,drop=True)).astype('uint8')
+			#print(dif_arr_subset.shape)
+		with rasterio.open(self.input_raster) as src1:#, open(self.dif_raster) as src2: 
+			full_extent = xr.open_rasterio(src1,chunks=('auto'))#.shape
+			output_arr = full_extent*dif_arr_subset
+			profile = src1.profile
 
-	def fix_nodata(self): 
-		"""Change large areas of nodata to a usable value."""
-		#src = xarray.open_rasterio(self.input_raster)
-		with rasterio.open(self.input_raster) as src1: 
-			# arr = xr.open_rasterio(src)
-			arr = src.read()
-			profile = src.profile
-			arr[np.where(arr==-3.4028235e+38)] = -999
-			# nodata_val = (arr.nodatavals)[0] #get the built in nodata value 
-			# #convert native nodata value to -9999
-			# arr=arr.where(arr == nodata_val,other=-9999)
-			# #arr=arr.where(arr.y == nodata_val,other=-9999)
-			# # mean_value = dask.compute(arr.max(dim=['x','y']))
-			# # print(mean_value.item())
-			# print(profile)
-			# print(arr.nodatavals[0])
-			# print(arr.x,arr.y)
-			# print(arr.values)
-			print(arr)
-		return arr 
+			#print(output_arr) 
+			# output_file = self.input_raster[:-4]+'_glaciers_removed.tif'
+			# with rasterio.open(output_file, 'w', **profile) as dst: 
+			# 	dst.write(output_arr)
+		return output_arr
+
 	def select_random_pts_from_raster(self):
-		pass
+		"""From an input raster select a random subset of points (pixels)."""
 
+		#read in the raster
+		with rasterio.open(self.input_raster) as src: 
+			arr = xr.open_rasterio(src,chunks=(1,(2917*6),(5761*6)))
+			arr = arr.squeeze(axis=0)
+			arr = arr.stack(dim_0=('x', 'y'))
+
+			arr = arr.reset_index('dim_0').drop(['x', 'y'])
+			arr = arr[arr==1]
+			print(arr.shape)
+			# arr = arr = src.read()
+			# profile = src.profile
+			# arr = arr.squeeze(axis=0)
+			# print(arr.shape)
+			# arr = arr.flatten()
+			# print(arr.shape)
+			# arr = arr[arr == 1]
+			# print(arr.shape)
+		# 	arr = xr.open_rasterio(src,(1,(2917*6),(5761*6)))
+		# 	no_data=float((arr.attrs['nodatavals'])[0])
+		# 	print(arr.shape)
+		# 	#print(arr.chunks)
+
+		# 	if len(arr.shape) > 2:
+		# 	#remove the first axis 
+		# 		arr = np.squeeze(arr,axis=0)
+		# 	else: 
+		# 		print('The shape of your array is: ', arr.shape)
+		# 	#get some random points	to make coords indexers 
+		# 	#arr = arr.where(arr == 1, drop=True)
+		# 	#print(arr.shape)
+		# 	#print(arr.chunks)
+		# 	#arr = arr.stack(dim_0=('x', 'y'))
+
+		# 	#arr = arr.reset_index('dim_0').drop(['x', 'y'])
+		# 	#arr = arr.stack(z=('x','y')).reset_index('z')
+		# 	#print(arr.shape)
+		# 	#arr = arr.where(arr==1,drop=True)
+		# 	coords_list = []
+		# 	seed(1)
+		# 	print(arr.values.sum())
+		# 	indices = random.sample(range(0, arr.shape[0]), 100)
+		# 	#rows = random.sample(range(0, arr.shape[0]), 100)
+		# 	#for row,col in zip(rows,cols):
+		# 	for i in indices: 
+		# 		#print(arr[row,col].coords['band'].values)
+		# 		coords_list.append(tuple([float(arr[i].coords['y'].values),float(arr[i].coords['x'].values),float(arr[i].coords['band'].values)]))#append a tuple of coords in the form row,col
+		# 		#coords_list.append(tuple([float(arr[row,col].coords['y'].values),float(arr[row,col].coords['x'].values),float(arr[row,col].coords['band'].values)]))#append a tuple of coords in the form row,col
+		# 	# df = pd.DataFrame(coords_list,columns=['lat','lon','value'])
+		# 	# gdf = gpd.GeoDataFrame(df,geometry=gpd.points_from_xy(df.lon,df.lat))
+		# 	# gdf.crs='EPSG:3338'
+		# 	# gdf['id'] = range(1,gdf.shape[0]+1)
+		# 	# #write out 
+		# 	# gdf.to_file("/vol/v3/ben_ak/vector_files/glacier_outlines/sample_test5.shp")#, driver='GeoJSON')
+		# 	# print(gdf)
+		# # 		# seed random number generator
+		# print(coords_list[0])
+
+		# return coords_list
+				
 def main(): 
 	params = sys.argv[1]
 	with open(str(params)) as f:
@@ -310,7 +354,8 @@ def main():
 		reclass_dict = variables["reclass_dict"]
 	t0 = datetime.now()
 	test = generate_pts(rgi_raster,stem_raster)
-	test.pad_raster()
+	#print(test.pad_raster())
+	output_coords = test.select_random_pts_from_raster()
 	t1 = datetime.now()
 	print((t1-t0)/60)
 	#reclassify(rgi_raster,nlcd_version,reclass_dict)
