@@ -4,7 +4,7 @@ import pyParz
 import glob
 import json
 from osgeo import gdal
-from lthacks_py3 import createMetadata
+#from lthacks_py3 import createMetadata
 
 def get_files(search_dir): 
 	# Returns a list of names in list files. 
@@ -53,9 +53,13 @@ def main():
 		resolution = variables["resolution"]
 		epsg = variables["epsg"]
 		resample_method = variables["resample_method"]
-	resample_files = get_files(search_dir)
-	output = pyParz.foreach(resample_files,resample,args=[resolution,epsg,resample_method],numThreads=20)
-	remove_temp_files(resample_files)
+		input_file = variables["input_file"]
+	#method for resampling one large file
+	resample([input_file,resolution,epsg,resample_method])
+	#method for resampling all files in a directory 
+	# resample_files = get_files(search_dir)
+	# output = pyParz.foreach(resample_files,resample,args=[resolution,epsg,resample_method],numThreads=20)
+	# remove_temp_files(resample_files)
 	#lthacks.createMetadata(sys.argv, out_filepath)	
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 {
 "search_dir": "/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/output_tiles_northern/",
-"resolution": "30",
+"resolution": "500",
 "epsg": "EPSG:3338",
-"resample_method": "cubic"
+"resample_method": "cubic", 
+"input_file":"/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/processed/AK_5m_original_mosaic_full.tif"
 }
