@@ -1,0 +1,4 @@
+{
+"csv_dir": "/vol/v3/ben_ak/excel_files/",
+"plot_fields": ["class", "image_source"]
+}

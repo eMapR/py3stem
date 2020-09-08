@@ -327,7 +327,7 @@ class GeneratePoints():
 			out_filename = os.path.split(self.dif_raster)[1][:-4]
 			#write a shapefile
 			gdf.to_file(self.output_dir+out_filename+'.shp')#"/vol/v3/ben_ak/vector_files/glacier_outlines/revised_class_1_output_23.shp")#, driver='GeoJSON')
-			gdf.to_csv(output_filename+'.csv')
+			gdf.to_csv(out_filename+'.csv')
 
 			#print(gdf)
 			# output_file = self.dif_raster[:-4]+'_subset_test.tif'
@@ -377,6 +377,7 @@ class Polygonize():
 		print(output_gdf.shape)
 		output_gdf.to_file(self.output_dir+self.input_raster[:-4]+'.shp')
 		#from https://gis.stackexchange.com/questions/187877/how-to-polygonize-raster-to-shapely-polygons
+
 	
 def main(): 
 	params = sys.argv[1]
@@ -394,31 +395,32 @@ def main():
 		#boundary = variables["boundary"]
 		#zoom = variables["zoom"]
 		#hist_raster = variables["hist_raster"]
-		#random_pts = variables["random_pts"]
+		random_pts = variables["random_pts"]
 		write_to_pickle = variables["write_to_pickle"]
-		#stat = variables["stat"]
-		#actual_source = variables["actual_source"]
-		#predicted_source = variables["predicted_source"]
-		#model_run = variables["model_run"]
+		stat = variables["stat"]
+		actual_source = variables["actual_source"]
+		predicted_source = variables["predicted_source"]
+		model_run = variables["model_run"]
 		nlcd_version = variables["nlcd_version"]
-		#modifier = variables["modifier"]
+		modifier = variables["modifier"]
 		reclass_value = variables["reclass_value"]
 		reclass_dict = variables["reclass_dict"]
 		uncertainty_layer = variables["uncertainty_layer"]
 	t0 = datetime.now()
-	test = GeneratePoints(rgi_raster,stem_raster,output_dir)
-	#print(test.pad_raster())
-	output_coords = test.select_random_pts_from_raster()
-	#output = Polygonize(uncertainty_layer,output_dir).raster_to_polygon()
-	t1 = datetime.now()
-	print((t1-t0)/60)
+	# test = GeneratePoints(rgi_raster,stem_raster,output_dir)
+	# #print(test.pad_raster())
+	# output_coords = test.select_random_pts_from_raster()
+	# #output = Polygonize(uncertainty_layer,output_dir).raster_to_polygon()
+	
 	#reclassify(nlcd_raster,nlcd_version,None)
 	#nlcd_disagree_summary(stem_raster)
 	#create_zonal_stats_df(stem_raster,rgi_raster,shapefile,resolution,output_dir,boundary,zoom,pickle_dir,write_to_pickle,stat)
 	#calc_zonal_stats(nlcd_raster,random_pts,resolution,stat,'nlcd')
-	#calc_confusion_matrix(rgi_raster,stem_raster,random_pts,resolution,stat,actual_source,predicted_source,model_run,write_to_pickle,pickle_dir,modifier)
+	calc_confusion_matrix(rgi_raster,stem_raster,random_pts,resolution,stat,actual_source,predicted_source,model_run,write_to_pickle,pickle_dir,modifier)
 	#extract_raster_pts(nlcd_raster,random_pts,resolution)
 	#rasterize(shapefile,resolution,output_dir)
+	t1 = datetime.now()
+	print((t1-t0)/60)
 if __name__ == '__main__':
 	main()
 
