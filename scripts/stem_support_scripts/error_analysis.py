@@ -272,53 +272,70 @@ class GeneratePoints():
 			# with rasterio.open(output_file, 'w', **profile) as dst: 
 			# 	dst.write(output_arr)
 		return output_arr
-
-	def select_random_pts_from_raster(self):
+	def get_class_size(self): 
+		"""Get the valid pixel count (1's) from a binary raster."""
+		with rasterio.open(self.input_raster) as src: 
+			arr = src.read(1)#.astype('float')
+			arr[arr<0] = 0
+			print(np.sum(arr))
+	def reduce_raster_size(self): 
+		with rasterio.open(self.dif_raster) as src: 
+			arr = src.read(1)
+			print(arr.shape)
+			arr = np.where(arr==0)
+			print(arr)
+			#arr = arr.flatten()
+			print(arr.shape)
+	def select_random_pts_from_raster(self,target_value):
 		"""From an input raster select a random subset of points (pixels)."""
 
 		#read in the raster
 		with rasterio.open(self.dif_raster) as src: 
-			arr = xr.open_rasterio(src,chunks=10000)#1,(2917*6),(5761*6)))
+			arr = xr.open_rasterio(src,chunks=1000000)#1,(2917*6),(5761*6)))
 			profile = src.profile
 
 			print(arr.shape)
 			if len(arr.shape) > 2: 
-				arr = arr.squeeze(axis=0)
+				try: 
+					arr = arr.squeeze(axis=0)
+				except: 
+					arr = arr[0, :, :]
+
 			else: 
 				print('the shape of your array is: ', arr.shape)
 			# print('exited if statement')
-			print(arr.shape)
-			print(type(arr))
-			arr= arr.where(arr==1,drop=True)
-			
-			print(arr)
+			# print(arr.shape)
+			# print(type(arr))
+			arr= arr.where(arr==1,drop=True) #changed so that the user can select the value you want 
+			# print(arr.shape)
+			# print(arr)
 			new_arr = arr.stack(z=('x','y')).reset_index('z')
 			new_arr = new_arr.dropna('z',how='any')
-			#new_arr = new_arr.
-			print('got below stack function')
-			#new_arr = new_arr[new_arr.notnull()]
-		# 	#print(arr.shape)
-		# 	#arr = arr.where(arr==1,drop=True)
-			print(new_arr)
-
+			print('passed the new_arr')
+			
+			# print(new_arr)
+			subset_list = []
 			coords_list = []
 			seed(1)
 		# 	print(arr)
 		# # 	print(arr.values.sum())
 			#indices = [9*i + x for i, x in enumerate(sorted(np.random.choice(range(0,arr.shape[0]), 500,replace=False)))]
+			# if target_value == 0: 
+			# 	subset = np.random.choice(range(0, new_arr.shape[0]), 34810150,replace=False)
+			# 	print('created subset')
+			# 	for i in subset: 
+			# 		#i = int(i)
+			# 		subset_list.append(tuple([float(new_arr[int(i)].coords['y'].values),float(new_arr[int(i)].coords['x'].values),float(new_arr[int(i)].coords['band'].values)]))#append a tuple of coords in the form row,col
+			# 	subset_arr = np.array(subset_list)
+			# 	coords_list = np.random.choice(subset_arr,500,replace=False)
+			# 	print('the coords list here is: ', print(coords_list))
+
+	
 			indices = np.random.choice(range(0, new_arr.shape[0]), 500,replace=False)
-			#x_vals = np.random.choice(x_arr,50)#range(0, arr.shape[0]), 500)
-			#y_vals = np.random.choice(y_arr,50)
-			#print(indices)
-		# 	print(arr)
-		# 	#rows = random.sample(range(0, arr.shape[0]), 100)
-		# 	#for row,col in zip(rows,cols):
 			for i in indices: 
-				print(i,f'i is type {type(i)}')
-				#print(arr[row,col].coords['band'].values)
 				i = int(i)
-				coords_list.append(tuple([float(new_arr[i].coords['y'].values),float(new_arr[i].coords['x'].values),float(new_arr[i].coords['band'].values)]))#append a tuple of coords in the form row,col
-				#coords_list.append(tuple([float(arr[row,col].coords['y'].values),float(arr[row,col].coords['x'].values),float(arr[row,col].coords['band'].values)]))#append a tuple of coords in the form row,col
+				coords_list.append(tuple([float(new_arr[int(i)].coords['y'].values),float(new_arr[int(i)].coords['x'].values),float(new_arr[int(i)].coords['band'].values)]))#append a tuple of coords in the form row,col
+			
 			df = pd.DataFrame(coords_list,columns=['lat','lon','value'])#{'lat':y_vals.tolist(),'lon':x_vals.tolist()},index=range(1,51))
 			gdf = gpd.GeoDataFrame(df,geometry=gpd.points_from_xy(df.lon,df.lat))
 			gdf.crs='EPSG:3338'
@@ -407,22 +424,91 @@ def main():
 		reclass_dict = variables["reclass_dict"]
 		uncertainty_layer = variables["uncertainty_layer"]
 	t0 = datetime.now()
-	# test = GeneratePoints(rgi_raster,stem_raster,output_dir)
-	# #print(test.pad_raster())
-	# output_coords = test.select_random_pts_from_raster()
-	# #output = Polygonize(uncertainty_layer,output_dir).raster_to_polygon()
+	pts = GeneratePoints(None,uncertainty_layer,output_dir)
+	#print(test.pad_raster())
+	#pts.reduce_raster_size()
+	output_coords = pts.select_random_pts_from_raster(0) #the extra arg can be 0 or 1 currently with 0 being select anything that isn't glacier and 1 being glacier
+	#output = Polygonize(uncertainty_layer,output_dir).raster_to_polygon()
 	
 	#reclassify(nlcd_raster,nlcd_version,None)
 	#nlcd_disagree_summary(stem_raster)
 	#create_zonal_stats_df(stem_raster,rgi_raster,shapefile,resolution,output_dir,boundary,zoom,pickle_dir,write_to_pickle,stat)
 	#calc_zonal_stats(nlcd_raster,random_pts,resolution,stat,'nlcd')
-	calc_confusion_matrix(rgi_raster,stem_raster,random_pts,resolution,stat,actual_source,predicted_source,model_run,write_to_pickle,pickle_dir,modifier)
+	#error_arr = GeneratePoints(uncertainty_layer,None,None).get_class_size()
+	#make confusion matrix
+	#calc_confusion_matrix(rgi_raster,stem_raster,random_pts,resolution,stat,actual_source,predicted_source,model_run,write_to_pickle,pickle_dir,modifier)
 	#extract_raster_pts(nlcd_raster,random_pts,resolution)
 	#rasterize(shapefile,resolution,output_dir)
 	t1 = datetime.now()
 	print((t1-t0)/60)
 if __name__ == '__main__':
 	main()
+#I am working
+# def select_random_pts_from_raster(self,target_value):
+# 		"""From an input raster select a random subset of points (pixels)."""
+
+# 		#read in the raster
+# 		with rasterio.open(self.dif_raster) as src: 
+# 			arr = xr.open_rasterio(src,chunks=10000)#1,(2917*6),(5761*6)))
+# 			profile = src.profile
+
+# 			print(arr.shape)
+# 			if len(arr.shape) > 2: 
+# 				arr = arr.squeeze(axis=0)
+# 			else: 
+# 				print('the shape of your array is: ', arr.shape)
+# 			# print('exited if statement')
+# 			print(arr.shape)
+# 			print(type(arr))
+# 			arr= arr.where(arr==1,drop=True)
+			
+# 			print(arr)
+# 			new_arr = arr.stack(z=('x','y')).reset_index('z')
+# 			new_arr = new_arr.dropna('z',how='any')
+# 			#new_arr = new_arr.
+# 			print('got below stack function')
+# 			#new_arr = new_arr[new_arr.notnull()]
+# 		# 	#print(arr.shape)
+# 		# 	#arr = arr.where(arr==1,drop=True)
+# 			print(new_arr)
+
+# 			coords_list = []
+# 			seed(1)
+# 		# 	print(arr)
+# 		# # 	print(arr.values.sum())
+# 			#indices = [9*i + x for i, x in enumerate(sorted(np.random.choice(range(0,arr.shape[0]), 500,replace=False)))]
+# 			indices = np.random.choice(range(0, new_arr.shape[0]), 500,replace=False)
+# 			#x_vals = np.random.choice(x_arr,50)#range(0, arr.shape[0]), 500)
+# 			#y_vals = np.random.choice(y_arr,50)
+# 			#print(indices)
+# 		# 	print(arr)
+# 		# 	#rows = random.sample(range(0, arr.shape[0]), 100)
+# 		# 	#for row,col in zip(rows,cols):
+# 			for i in indices: 
+# 				print(i,f'i is type {type(i)}')
+# 				#print(arr[row,col].coords['band'].values)
+# 				i = int(i)
+# 				coords_list.append(tuple([float(new_arr[i].coords['y'].values),float(new_arr[i].coords['x'].values),float(new_arr[i].coords['band'].values)]))#append a tuple of coords in the form row,col
+# 				#coords_list.append(tuple([float(arr[row,col].coords['y'].values),float(arr[row,col].coords['x'].values),float(arr[row,col].coords['band'].values)]))#append a tuple of coords in the form row,col
+# 			df = pd.DataFrame(coords_list,columns=['lat','lon','value'])#{'lat':y_vals.tolist(),'lon':x_vals.tolist()},index=range(1,51))
+# 			gdf = gpd.GeoDataFrame(df,geometry=gpd.points_from_xy(df.lon,df.lat))
+# 			gdf.crs='EPSG:3338'
+# 			gdf['id'] = range(1,gdf.shape[0]+1)
+# 			#write out 
+# 			out_filename = os.path.split(self.dif_raster)[1][:-4]
+# 			#write a shapefile
+# 			gdf.to_file(self.output_dir+out_filename+'.shp')#"/vol/v3/ben_ak/vector_files/glacier_outlines/revised_class_1_output_23.shp")#, driver='GeoJSON')
+# 			gdf.to_csv(out_filename+'.csv')
+
+# 			#print(gdf)
+			# output_file = self.dif_raster[:-4]+'_subset_test.tif'
+			# with rasterio.open(output_file, 'w', **profile) as dst: 
+			# 	dst.write(arr)
+		# 		# seed random number generator
+		#print(coords_list[0])
+
+
+
 
 # mask = None
 		# with rasterio.Env():
