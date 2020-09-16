@@ -6,7 +6,7 @@ Created on Tues Apr 28 17:33:11 2020
 @author: broberts
 """
 #from lthacks_py3.lthacks_py3 import *
-import lthacks_py3 as lthacks
+#import lthacks_py3 as lthacks
 import zipfile
 import sys
 from pathlib import Path
@@ -17,7 +17,7 @@ import os
 import matplotlib.pyplot as plt
 from rasterio.enums import Resampling
 from osgeo import gdal
-from useful_functions import intersect_polygons
+#from useful_functions import intersect_polygons
 import json 
 import geopandas as gpd
 import pyParz
@@ -192,7 +192,7 @@ def main():
 		resolution = variables["resolution"]
 	
 	#unzip one large file (e.g. original download)
-	#unzip_single(unzip_filepath,out_filepath)
+	unzip_single(unzip_filepath,out_filepath)
 
 	#unzip all zipped files in a directory (not recursive)
 	#files = [str(file) for file in Path(unzip_filepath).glob('*.zip')]
@@ -204,7 +204,7 @@ def main():
 	#create_processing_bounds(input_shp_1,input_shp_2,out_filepath,epsg)
 
 	#can be called separately but is otherwise called as part of the mosaic function 
-	resample(in_filepath,resolution,out_filepath,epsg,region)
+	#resample(in_filepath,resolution,out_filepath,epsg,region)
 
 	#do the mosaicking 
 	#output=make_mosaic(in_filepath,out_filepath,15,temp_dest,input_shp_1,'GEOCELL_ID',epsg) #upscale factor should be your target resolution 

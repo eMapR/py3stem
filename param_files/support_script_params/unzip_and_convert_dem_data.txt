@@ -1,7 +1,7 @@
 {
-"unzip_filepath": "/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/downloads/",
+"unzip_filepath": "/vol/v3/ben_ak/raster_files/nlcd/NLCD_2016_Land_Cover_AK_20200213.zip",
 "in_filepath": "/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/processed/AK_5m_original_mosaic_southern_region.tif",
-"out_filepath": "/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/processed/",
+"out_filepath": "/vol/v3/ben_ak/raster_files/nlcd/",
 "temp_dest": "/vol/v2/ak_glaciers/dem/AK_5m_IFSAR/temp_files/",
 "input_shp_1": "/vol/v3/ben_ak/vector_files/ifsar_processing/rgi_ifsar_processing_southern_region.shp",
 "input_shp_2": "/vol/v3/ben_ak/vector_files/ifsar_processing/rgi_cnd_tiles_northern_region_dissolve.shp",

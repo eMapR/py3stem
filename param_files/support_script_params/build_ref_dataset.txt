@@ -1,0 +1,6 @@
+{
+"csv_directory":"/vol/v3/ben_ak/py3stem/ref_data/", 
+"remove_field":"discard", 
+"remove_val":"y", 
+"plot_fields": ["class", "image_source"]	
+}

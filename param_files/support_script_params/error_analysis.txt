@@ -1,27 +1,26 @@
+
 {
 "shapefile": "/vol/v3/ben_ak/vector_files/stem_processing/rgi_cnd_tiles_southern_region_dissolve.shp",
 "resolution": "30",
-"output_dir":"/vol/v3/ben_ak/raster_files/glacier_velocity/", 
+"output_dir":"/vol/v3/ben_ak/vector_files/uncertainty_layers/", 
 "pickle_dir":"/vol/v3/ben_ak/param_files/script_params/",  
-"rgi_raster":"/vol/v3/ben_ak/raster_files/glacier_velocity/2001_gte_10_rgi_nlcd_epsg_3338_30m.tif",
-"nlcd_raster":"/vol/v3/ben_ak/raster_files/nlcd/NLCD_2001_epsg_3338_northern_region_disagreement_areas.tif", 
-"stem_raster": "/vol/v3/ben_ak/raster_files/output_layers/stem_outputs/06062020_model_run_southern_region_binary_glaciers_merged.tif", 
+"ref_raster":"/vol/v3/ben_ak/raster_files/stem_year_comparison/2017_stem_2001_nlcd_r_glacier_classes_combined.tif",
+"nlcd_raster":"/vol/v3/ben_ak/raster_files/nlcd/NLCD_2016_southern_region_US_epsg_3338_disagreement_areas_NLCD_classes.tif", 
+"classified_raster":"/vol/v3/ben_ak/param_files_rgi/southern_region/models/2017_year_nlcd_r_2016/2017_year_nlcd_r_2016_vote_glacier_classes_combined.tif", 
 "hist_raster":"/vol/v3/ben_ak/raster_files/glacier_velocity/2001_gte_5_reprojected_epsg_3338_30m.tif", 
 "boundary":"/vol/v3/ben_ak/vector_files/alaska_bounds_buffer1000_epsg3338.shp", 
 "zoom":"/vol/v3/ben_ak/vector_files/ifsar_processing/rgi_cnd_tiles_northern_region_dissolve.shp", 
-"random_pts":"/vol/v3/ben_ak/vector_files/error_assessment/southern_region_1100_pts_rgi_2000-2004.shp",
+"random_pts":"/vol/v3/ben_ak/vector_files/uncertainty_layers/2001_uncertainty_layers_combined_clipped_to_AK_southern_region_cnd_tiles_difference.shp",
+"uncertainty_layer":"/vol/v3/ben_ak/py3stem/ref_data/2001_gte_10_rgi_nlcd_reclassify_all_classes_combined.csv",
 "write_to_pickle":"true", 
 "stat":"majority", 
-"actual_source":"rgi", 
-"predicted_source":"stem", 
-"model_run":"06062020", 
-"nlcd_version":"user", 
+"actual_source":"ref_ds", 
+"predicted_source":"2017_stem_class_combined", 
+"model_run":"09152020", 
+"nlcd_version":"2016_original_version", 
 "reclass_value":"2",
 "reclass_dict":"0:0,1:1,2:1,3:2,4:1,5:2,6:2,7:3",
-"modifier":"1100_pts_merged_southern_region"
+"modifier":"class_combined_diff"
 }
-
-
-
 
 

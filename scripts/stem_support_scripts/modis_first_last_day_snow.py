@@ -41,28 +41,29 @@ import error_analysis as analysis
 import seaborn as sns
 import string
 from pathlib import Path
-
+from dateutil.parser import parse
+import re
 def clip_it(shp_file,raster_file,resolution,output_directory): 
 	#for shp_file in glob.glob(climate_regions+"*.shp"):
 		#print(shp_file)
 
-	fn = os.path.split(shp_file)[1][:-4]+f'_AK_{os.path.split(raster_file)[1][:-4]}_{resolution}m.tif'
+	fn = os.path.split(shp_file)[1][:-4]+f'_{os.path.split(raster_file)[1][:-4]}_{resolution}m.tif'
 	output_filepath = output_directory+fn
 	cmd = 'gdalwarp -cutline '+shp_file+ ' -crop_to_cutline -dstalpha -t_SRS "EPSG:3338" '+raster_file+' '+ output_filepath 
 	#cmd_list.append(cmd)
 	return cmd
-def process_climate_regions(climate_regions,resolution,output_directory,input_dem,modis_directory):
+def process_climate_regions(climate_regions,resolution,output_directory,input_dem,modis_directory,run_modis):
 	"""Read in and process the AK climate regions."""
 	cmd_list = []
 	#run for a directory of files
-	if not modis_directory == None: 
+	if run_modis.lower()=='true': #iterate over a directory of rasters and a directory of shapefiles
 		print('running for a directory')
 		for rast_file in glob.glob(modis_directory+'*.tif'): 
 			for shp_file in glob.glob(climate_regions+"*.shp"):
 				cmd = clip_it(shp_file,rast_file,resolution,output_directory)
 				cmd_list.append(cmd)
 		print('cmd list len for multiple rasters is: ',len(cmd_list))
-	else:
+	else: #run for just one file (e.g. a dem) and a directory of shapefiles
 		for shp_file in glob.glob(climate_regions+"*.shp"):
 			cmd=clip_it(shp_file,input_dem,resolution,output_directory)
 			print('THE COMMAND IS: ', cmd)
@@ -147,28 +148,17 @@ def process_modis_data(modis_inputs,dem_inputs,output_directory,make_rasters,wri
 	output_list = []
 	for mod_file in glob.glob(modis_inputs+'*.tif'): 
 		output_dict = {}
-		#print(mod_file)
 		ds = gdal.Open(mod_file)
 		geotransform = ds.GetGeoTransform()
-		#print(upper_left_x, x_size, x_rotation, upper_left_y, y_rotation, y_size)
-		# ulx, xres, xskew, uly, yskew, yres  = ds.GetGeoTransform()
-		# lrx = ulx + (ds.RasterXSize * xres)
-		# lry = uly + (ds.RasterYSize * yres)
 		#get some of the info we need to populate the df
-		year = os.path.split(mod_file)[1].partition('AK')[2][1:5] #pull the year out of the name string. This is kind of hardcoded for the current name structure
-		#print('the year is: ',year)
-		mod_region_id = os.path.split(mod_file)[1].partition('AK')[0] #get the name of the region
+		year = (re.findall('(\d{4})', os.path.split(mod_file)[1]))[0]#get the year from the filename 
+		mod_region_id = (os.path.split(mod_file)[1]).split(year)[0] #get the region id and then remove the trailing
+		
 		#use band to determine first or last day of snow in the output df
 		arr_first = np.array(ds.GetRasterBand(1).ReadAsArray())
 		arr_last = np.array(ds.GetRasterBand(2).ReadAsArray())
-		# zeros = np.zeros(arr_first.shape)
-		# print('the zeros shape is ', zeros.shape)
-		# (y_index,x_index) = np.nonzero(arr_first>=0)
-		# x_coords = (x_index * x_size + upper_left_x + (x_size / 2)).reshape(arr_first.shape) #add half the cell size
-		# y_coords = (y_index * y_size + upper_left_y + (y_size / 2)).reshape(arr_first.shape) #to centre the point
-		# print(x_coords.shape)
-		# print(y_coords.shape)
 		for region in glob.glob(dem_inputs+'*.tif'): #iterate through the climate region dem files 
+			print(region)
 			region_id = os.path.split(region)[1].partition('AK')[0] #get the name of the dem region 
 			try: 
 				if mod_region_id == region_id: 
@@ -196,34 +186,11 @@ def process_modis_data(modis_inputs,dem_inputs,output_directory,make_rasters,wri
 							write_raster(last_bin_mask,k,output_directory,mod_region_id,year,ds,'last_day')
 						else:
 							pass
-						# outdata = None
-						# band=None
-						# ds=None
-						#get the pixel centroid coordinates masked = np.where((arr>= i) & (arr<i+250),1,0)
-						#fwd = Affine.from_gdal(*geotransform)
-						#output_coords = np.argwhere(masked_first>0)
-						#print(output_coords.tolist())
-						#coord_list = [list(fwd*i) for i in output_coords.tolist()]
-						#print(output_list)
-						# x_coords = np.full(masked_first.shape,upper_left_x)
-						# y_coords = np.full(masked_first.shape,upper_left_y)
-						# #shift the values by res/2
-						# loc_arr = np.subtract(np.arange(masked_first.shape[0]*masked_first.shape[1]).reshape(masked_first.shape),(np.full(masked_first.shape,x_size/2)))
-
-						# bin_mask = np.where(masked_first>=0,1,0)
-
-						# x_output_coords = bin_mask*x_coords
-						# y_output_coords = bin_mask*y_coords
-						# output_coords = zip(x_output_coords,y_output_coords)
-						# print(output_coords)
-						# print(output_coords.shape)
-						#store the outputs {"type":"MultiPoint","coordinates": [[-2168447.821,921024.1641], [-2168447.921,921024.7641]]}
 						output_dict = {'year':year,'climate_region':mod_region_id[:-1],'lower_bound':int(k),'upper_bound':int(k)+250,'first_day_mean':np.nanmean(masked_first),'last_day_mean':np.nanmean(masked_last)}#,
-						#'geometry':'{"type":"MultiPoint","coordinates":'+f'{coord_list}'+'}'}#'upper_left_x':ulx,
-						#'upper_left_y':uly,'lower_right_x':lrx,'lower_right_y':lry}
 						output_list.append(output_dict)
 					else: 
 						pass
+						
 			except TypeError as e:
 				print('that did not work but the error was: ',e)
 				print(mod_region_id,region_id)
@@ -233,11 +200,12 @@ def process_modis_data(modis_inputs,dem_inputs,output_directory,make_rasters,wri
 		ds = None
 	output_df = pd.DataFrame(output_list).sort_values(by=['climate_region'])
 	if write_to_pickle.lower() =='true':
-		pickled_df = pickle.dump(output_df, open(pickle_directory+'modis_first_last_day_snow_by_climate_region', 'ab' ))
+		pickled_df = pickle.dump(output_df, open(pickle_directory+'modis_first_last_day_snow_by_climate_region1', 'ab' ))
 	return output_df
 
 def graph_first_last_snow_days(input_df,variable): 
 	df = pickle.load(open(input_df,'rb'))
+	print(df)
 	region_list = df['climate_region'].unique()
 	year_list = sorted(df['year'].unique())
 	rows = 3
@@ -318,17 +286,16 @@ def main():
 		write_to_pickle = variables['write_to_pickle']
 		pickle_directory = variables['pickle_directory']
 		variable = variables['variable']
-	#for file in glob.glob(input_directory+'*.tif'): 
-	
-
-		#cmd=process_climate_regions(climate_regions,resolution,output_directory,dem,file[:-4])
-		#subprocess.call(cmd,shell=True)
-		#create_masks(input_directory,output_directory,modis_directory)
+		run_modis = variables['run_modis']
+		#process to run the creation of df for input to graphing function 
 		df = process_modis_data(modis_directory,input_directory,output_directory,make_rasters,write_to_pickle,pickle_directory)
-		#graph_first_last_snow_days(pickle_directory+'modis_first_last_day_snow_by_climate_region',variable)
+		#graph the outputs by climate region and elevation band - note that the previous command is overwriting whatever is in that directory
+		graph_first_last_snow_days(pickle_directory+'modis_first_last_day_snow_by_climate_region1',variable)
+		#write the df out to a csv
 		#df.to_csv(output_directory+'elevation_mean_by_climate_region_run_w_coords.csv')
 		#generate_mosaic(input_directory,output_directory,variable)
-		# clip_cmds= process_climate_regions(climate_regions,resolution,output_directory,dem,modis_directory)
+		#use to run the clipping commands in parallel 
+		# clip_cmds= process_climate_regions(climate_regions,resolution,output_directory,dem,modis_directory,run_modis)
 		# # run the commands in parallel 
 		# pool = multiprocessing.Pool(processes=20)
 		# pool.map(run_cmd, clip_cmds)  
