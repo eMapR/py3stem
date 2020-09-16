@@ -44,6 +44,7 @@ class MakePlots():
 				plt.xticks(rotation=45)
 		plt.show()
 		plt.close('all')
+		
 def main(): 
 	params = sys.argv[1]
 	with open(str(params)) as f:

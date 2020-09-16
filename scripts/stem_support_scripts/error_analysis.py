@@ -35,6 +35,7 @@ from osgeo.gdalconst import *
 import fiona
 from shapely.geometry import shape
 import rasterio.features
+import build_ref_dataset as ref_dataset
 def rasterize(shp,resolution,output_dest): 
 	"""Convert vector to raster."""
 	input_shp = ogr.Open(shp)
@@ -51,7 +52,7 @@ def rasterize(shp,resolution,output_dest):
 	ds = None
 	return output_raster
 
-def calc_zonal_stats(raster,shp,resolution,stat,source): 
+def calc_zonal_stats(raster,shp,resolution,stat,source,ref_dataset): 
 	"""Calculate pixel counts inside polygons."""
 	geo_df = gpd.read_file(shp)
 	
@@ -70,54 +71,74 @@ def calc_zonal_stats(raster,shp,resolution,stat,source):
 	column_names = dict(zip(old_names,new_names))
 	output_geodf.rename(columns=column_names,inplace=True)
 
+
 	#output_geodf = output_geodf.rename(columns={'count':source+'_count'},inplace=True)
 	
-	#print(output_geodf)
 	return output_geodf
 	
 
 def read_pickles(*argv): 
 	#head,tail = os.path.split(raster_2)
-	actual_file = argv[9]+f'{argv[5]}_{argv[10]}_zonal_stats_df'
+	#actual_file = argv[9]+f'{argv[5]}_{argv[10]}_zonal_stats_df'
 	predicted_file = argv[9]+f'{argv[7]}_{argv[6]}_{argv[10]}_zonal_stats_df'
 	if argv[8].lower()=='true': 
 		print('pickling...')
 		#generate zonal stats and pickle
 		
 		if not os.path.exists(predicted_file): 
-			print(f'creating new files {actual_file} and {predicted_file}')
-			actual = calc_zonal_stats(argv[0],argv[2],argv[3],argv[4],argv[5])
-			predicted = calc_zonal_stats(argv[1],argv[2],argv[3],argv[4],argv[6])
+			#print(f'creating new files {actual_file} and {predicted_file}')
+			#actual = calc_zonal_stats(argv[0],argv[2],argv[3],argv[4],argv[5])
+			predicted = calc_zonal_stats(argv[1],argv[2],argv[3],argv[4],argv[6],argv[11])
 			#df = pd.concat([stem_df,rgi_df],axis=1)
-			actual_ds = pickle.dump(actual, open(actual_file, 'ab' ))
+			#actual_ds = pickle.dump(actual, open(actual_file, 'ab' ))
 			predicted_ds = pickle.dump(predicted,open(predicted_file,'ab'))
-			return actual, predicted 
+			return predicted #remove actual 
 		else: 
 			print('both files already exist')
 			pass
 	else: #read in the pickled df if its the same data
 		print('reading from pickle...')
-		actual_df = pickle.load(open(actual_file,'rb'))
+		#actual_df = pickle.load(open(actual_file,'rb'))
 		predicted_df = pickle.load(open(predicted_file,'rb'))
+		#print(predicted_df.head())
+		#print(predicted_df.columns)
 		#print(actual_df.head())
-		return actual_df,predicted_df
+		return predicted_df #removed the actual df 
 #argv order: #0:nlcd_raster,1:stem_raster,2:random_pts,3:resolution,4:stat,5:actual_source,6:predicted_source,7:model_run,8:write_to_pickle,9:pickle_dir,10:modifier)
 
 def calc_confusion_matrix(*argv):#actual_source,predicted_source,stat,): 
 	"""Calculate a confusion matrix to compare nlcd or rgi and classification."""
 	data = read_pickles(*argv)
-	actual = data[0].replace(np.nan,0)#read_pickles(*argv)[0].replace(np.nan,0)
-	predicted = data[1].replace(np.nan,0)#read_pickles(*argv)[1].replace(np.nan,0)#calc_zonal_stats(predicted_raster,shp,resolution,stat,predicted_source)
+	#print(data)
+	actual = ref_dataset.get_csvs(argv[11],'discard','y').replace(np.nan,0)#previously getting values from raster, now getting from ref dataset csv
+	print('id col for actual is: ', actual.id)
+	print(f'shape is: {actual.shape}')
+	#actual.index = np.arange(1,len(actual)+1)#actual.set_index(range(1,actual.shape[0]))
+	#df.index = np.arange(1, len(df) + 1)
+	#print(actual)
+	#print(actual.shape)
+	predicted = data.replace(np.nan,0)#read_pickles(*argv)[1].replace(np.nan,0)#calc_zonal_stats(predicted_raster,shp,resolution,stat,predicted_source)
+	predicted.index = np.arange(1,len(predicted)+1)
+	predicted = predicted[predicted.index.isin(actual.index)] 
+	# actual.rename(columns={'2001_NLCD_classification_southern_region_id':'id'},inplace=True) predicted[predicted.set_index([range(1,predicted.shape[0])]).index.isin(predicted.set_index(['id']).index)]
+	# actual = pd.merge(actual, predicted, left_on='id',how='left', indicator=True) \
+ #           .query("_merge == 'left_only'") \
+ #           .drop('_merge',1)
+	#print('actual is:', actual['lat'],actual['lon'])
+	#print(f'actual shape is {actual.shape}')
+	#print(predicted.columns)
+	#print('predicted is: ', predicted['2017_stem_class_one_lat'],predicted['2017_stem_class_one_lon'])
+	#print(f'predicted shape is {predicted.shape}')
 	#print(actual.head())
 	#print(predicted.head())
-	actual_col = actual[str(argv[5]+'_'+argv[4])]
+	actual_col = actual['binary']#actual[str(argv[5]+'_'+argv[4])]
 	predicted_col = predicted[str(argv[6]+'_'+argv[4])]
-	print(actual_col.unique())
-	print(predicted_col.unique())
+	#print(actual_col.unique())
+	#print(predicted_col.unique())
 	actual_ls = [float(i) for i in list(actual_col)]
 	predicted_ls = [float(i) for i in list(predicted_col)]
-	labels = sorted(list(set(list(actual_col)+list(predicted_col))))# sorted(actual[str(argv[5]+'_'+argv[4])].unique())
-	print(labels)
+	labels = sorted(list(set(list(actual_col)+list(predicted_col))))
+	#print(labels)
 	results = confusion_matrix(actual_ls, predicted_ls,labels) 
 	#disp = plot_confusion_matrix(None,actual_ls,predicted_ls,display_labels=labels,cmap=plt.cm.Blues)
 	#fig,(ax,ax1) = plt.subplots(nrows=1,ncols=2)
@@ -406,8 +427,8 @@ def main():
 		resolution = int(variables["resolution"])
 		output_dir = variables["output_dir"]
 		pickle_dir = variables["pickle_dir"]
-		rgi_raster = variables["rgi_raster"] #previously "/vol/v3/ben_ak/raster_files/glacier_velocity/rgi_cnd_tiles_southern_region_dissolve.tif",
-		stem_raster = variables["stem_raster"]
+		ref_raster = variables["ref_raster"] #previously "/vol/v3/ben_ak/raster_files/glacier_velocity/rgi_cnd_tiles_southern_region_dissolve.tif",
+		classified_raster = variables["classified_raster"]
 		nlcd_raster = variables["nlcd_raster"]
 		#boundary = variables["boundary"]
 		#zoom = variables["zoom"]
@@ -424,10 +445,11 @@ def main():
 		reclass_dict = variables["reclass_dict"]
 		uncertainty_layer = variables["uncertainty_layer"]
 	t0 = datetime.now()
-	pts = GeneratePoints(None,uncertainty_layer,output_dir)
+	#generate random reference points
+	#pts = GeneratePoints(None,uncertainty_layer,output_dir)
 	#print(test.pad_raster())
 	#pts.reduce_raster_size()
-	output_coords = pts.select_random_pts_from_raster(0) #the extra arg can be 0 or 1 currently with 0 being select anything that isn't glacier and 1 being glacier
+	#output_coords = pts.select_random_pts_from_raster(0) #the extra arg can be 0 or 1 currently with 0 being select anything that isn't glacier and 1 being glacier
 	#output = Polygonize(uncertainty_layer,output_dir).raster_to_polygon()
 	
 	#reclassify(nlcd_raster,nlcd_version,None)
@@ -436,7 +458,7 @@ def main():
 	#calc_zonal_stats(nlcd_raster,random_pts,resolution,stat,'nlcd')
 	#error_arr = GeneratePoints(uncertainty_layer,None,None).get_class_size()
 	#make confusion matrix
-	#calc_confusion_matrix(rgi_raster,stem_raster,random_pts,resolution,stat,actual_source,predicted_source,model_run,write_to_pickle,pickle_dir,modifier)
+	calc_confusion_matrix(None,classified_raster,random_pts,resolution,stat,actual_source,predicted_source,model_run,write_to_pickle,pickle_dir,modifier, uncertainty_layer)
 	#extract_raster_pts(nlcd_raster,random_pts,resolution)
 	#rasterize(shapefile,resolution,output_dir)
 	t1 = datetime.now()
@@ -444,6 +466,121 @@ def main():
 if __name__ == '__main__':
 	main()
 #I am working
+# def read_pickles(*argv): 
+# 	#head,tail = os.path.split(raster_2)
+# 	actual_file = argv[9]+f'{argv[5]}_{argv[10]}_zonal_stats_df'
+# 	predicted_file = argv[9]+f'{argv[7]}_{argv[6]}_{argv[10]}_zonal_stats_df'
+# 	if argv[8].lower()=='true': 
+# 		print('pickling...')
+# 		#generate zonal stats and pickle
+		
+# 		if not os.path.exists(predicted_file): 
+# 			print(f'creating new files {actual_file} and {predicted_file}')
+# 			actual = calc_zonal_stats(argv[0],argv[2],argv[3],argv[4],argv[5])
+# 			predicted = calc_zonal_stats(argv[1],argv[2],argv[3],argv[4],argv[6])
+# 			#df = pd.concat([stem_df,rgi_df],axis=1)
+# 			actual_ds = pickle.dump(actual, open(actual_file, 'ab' ))
+# 			predicted_ds = pickle.dump(predicted,open(predicted_file,'ab'))
+# 			return actual, predicted 
+# 		else: 
+# 			print('both files already exist')
+# 			pass
+# 	else: #read in the pickled df if its the same data
+# 		print('reading from pickle...')
+# 		actual_df = pickle.load(open(actual_file,'rb'))
+# 		predicted_df = pickle.load(open(predicted_file,'rb'))
+# 		#print(actual_df.head())
+# 		return actual_df,predicted_df
+# #argv order: #0:nlcd_raster,1:stem_raster,2:random_pts,3:resolution,4:stat,5:actual_source,6:predicted_source,7:model_run,8:write_to_pickle,9:pickle_dir,10:modifier)
+
+# def calc_confusion_matrix(*argv):#actual_source,predicted_source,stat,): 
+# 	"""Calculate a confusion matrix to compare nlcd or rgi and classification."""
+# 	data = read_pickles(*argv)
+# 	actual = data[0].replace(np.nan,0)#read_pickles(*argv)[0].replace(np.nan,0)
+# 	predicted = data[1].replace(np.nan,0)#read_pickles(*argv)[1].replace(np.nan,0)#calc_zonal_stats(predicted_raster,shp,resolution,stat,predicted_source)
+# 	#print(actual.head())
+# 	#print(predicted.head())
+# 	actual_col = actual[str(argv[5]+'_'+argv[4])]
+# 	predicted_col = predicted[str(argv[6]+'_'+argv[4])]
+# 	print(actual_col.unique())
+# 	print(predicted_col.unique())
+# 	actual_ls = [float(i) for i in list(actual_col)]
+# 	predicted_ls = [float(i) for i in list(predicted_col)]
+# 	labels = sorted(list(set(list(actual_col)+list(predicted_col))))# sorted(actual[str(argv[5]+'_'+argv[4])].unique())
+# 	print(labels)
+# 	results = confusion_matrix(actual_ls, predicted_ls,labels) 
+# 	#disp = plot_confusion_matrix(None,actual_ls,predicted_ls,display_labels=labels,cmap=plt.cm.Blues)
+# 	#fig,(ax,ax1) = plt.subplots(nrows=1,ncols=2)
+# 	ax=plt.subplot()
+# 	sns.heatmap(results,annot=True,ax=ax,fmt='g')
+# 	ax.set_xlabel('Predicted labels');ax.set_ylabel('True labels')
+# 	ax.set_title(f'Confusion Matrix: {argv[5]} {argv[6]} {argv[7]} model run') 
+# 	ax.set_xticklabels(labels)
+# 	ax.set_yticklabels(labels)
+# 	print(results) 
+# 	print ('Accuracy Score :',accuracy_score(actual_ls, predicted_ls))
+# 	print ('Report : ')
+# 	print (classification_report(actual_ls, predicted_ls))
+# 	plt.show()
+# 	plt.close('all')
+
+
+# def create_zonal_stats_df(stem_raster,rgi_raster,shp,resolution,output_dir,boundary,zoom,pickle_dir,read_from_pickle,stat): 
+# 	"""A helper function for calc_zonal_stats."""
+# 	head,tail = os.path.split(stem_raster)
+
+# 	if read_from_pickle.lower()=='true': 
+# 		print('pickling...')
+# 		#generate zonal stats and pickle
+# 		output_file = pickle_dir+f'{tail[0:8]}_stem_rgi_zonal_stats_df'
+# 		if os.path.exists(output_file): 
+# 			pass
+# 		else: 
+# 			stem_df = calc_zonal_stats(stem_raster,shp,resolution,stat,'stem')
+# 			rgi_df = calc_zonal_stats(rgi_raster,shp,resolution,stat,'rgi')
+# 			df = pd.concat([stem_df,rgi_df],axis=1)
+# 			pickle_data=pickle.dump(df, open(output_file, 'ab' ))
+# 	elif os.path.exists(pickle_dir+f'{tail[0:8]}_stem_rgi_zonal_stats_df'): #read in the pickled df if its the same data
+# 		print('reading from pickle...')
+# 		df = pickle.load(open(pickle_dir+f'{tail[0:8]}_stem_rgi_zonal_stats_df','rb'))
+# 	else: 
+# 		print(pickle_dir+f'{tail[0:8]}_stem_rgi_zonal_stats_df'+'does not exist, please make sure the settings in the param file are correct')
+# 	#calculate the percent error aggregated by cell (pixelwise doesn't make sense because its binary)
+# 	df['pct_err'] = (((df['stem_count']-df['rgi_count'])/df['rgi_count'])*100)
+# 	#rename a col to geometry because the plot function wants that
+# 	df.rename(columns={'rgi_geometry':'geometry'},inplace=True)
+# 	#get rid of garbage 
+# 	df = df.drop(['stem_left','stem_top','stem_right','stem_bottom','stem_geometry','rgi_left','rgi_top','rgi_right','rgi_bottom'],axis=1)
+# 	#select a subset by getting rid of infs
+# 	df_slice = df.replace([np.inf, -np.inf],np.nan).dropna(axis=0)#df.query('stem_count!=0')#[df['stem_count']!=0 and df['rgi_count']!=0]
+# 	#read in plotting shapefiles
+# 	inset = gpd.read_file(boundary)
+# 	background = gpd.read_file(zoom)
+# 	#do the plotting 
+# 	fig,ax = plt.subplots()
+# 	#make the colorbar the same size as the plot
+# 	divider = make_axes_locatable(ax)
+# 	cax = divider.append_axes("right",size="5%",pad=0.1)
+# 	left, bottom, width, height = [0.1, 0.525, 0.25, 0.25]
+# 	ax1 = fig.add_axes([left, bottom, width, height])
+# 	#specify discrete color ramp 
+# 	cmap = mpl.colors.ListedColormap(['#005a32','#238443','#41ab5d','#78c679','#addd8e','#d9f0a3','#ffffcc',#'#ffffcc','#d9f0a3','#addd8e','#78c679','#41ab5d','#238443','#005a32',
+# 	'#F2B701','#E73F74','#180600','#E68310','#912500','#CF1C90','#f23f01',
+# 	'#f1eef6','#d0d1e6','#a6bddb','#74a9cf','#3690c0','#0570b0','#034e7b']) 
+# 	#'#855C75','#D9AF6B','#AF6458','#736F4C','#526A83','#625377','#68855C','#9C9C5E','#A06177','#8C785D','#467378','#7C7C7C'])
+# 	#'#5F4690','#1D6996','#38A6A5','#0F8554','#73AF48','#EDAD08','#E17C05','#CC503E','#94346E','#6F4070','#994E95','#666666'])#'#5D69B1','#52BCA3','#99C945','#CC61B0','#24796C','#DAA51B','#2F8AC4','#764E9F','#ED645A','#CC3A8E','#63665b'])#["#f5b460","#F1951C","#a86813", "#793200", "#004039","#006B5F", "#62BAAC","#ba6270"])#'#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6','#6a3d9a'])#
+# 	norm = mpl.colors.BoundaryNorm([-100,-90,-80,-70,-60,-50,-40,-30,-20,-10,0,10,20,30,40,50,60,70,80,90,100],cmap.N) 
+# 	background.plot(color='lightgray',ax=ax)
+# 	df_slice.loc[df_slice['pct_err']<=100].plot(column='pct_err',ax=ax,legend=True,cax=cax,cmap=cmap,norm=norm)
+# 	ax.set_title(f'{tail[0:8]} model run AK southern processing region percent error')
+
+# 	inset.plot(color='lightgray',ax=ax1)
+# 	df_slice.loc[df_slice['pct_err']<=100].plot(column='pct_err',ax=ax1,cmap=cmap,norm=norm)
+# 	ax1.get_xaxis().set_visible(False)
+# 	ax1.get_yaxis().set_visible(False)
+# 	plt.tight_layout() 
+# 	plt.show()
+# 	plt.close('all')
 # def select_random_pts_from_raster(self,target_value):
 # 		"""From an input raster select a random subset of points (pixels)."""
 
