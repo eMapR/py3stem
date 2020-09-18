@@ -10,7 +10,7 @@ def get_csvs(csv,remove_field,remove_val):
 	df = pd.read_csv(csv)
 	df.index = np.arange(1,len(df)+1)
 
-	df1 = df[df[remove_field]!=remove_val] #remove anything that we wanted to discard in classification
+	df1 = df[df[remove_field]!=remove_val or df[remove_field]!='m'] #remove anything that we wanted to discard in classification
 	df1 = df1[df1['class']!='u'] #remove the undecided points
 	#print(df.head)
 	#print(df.shape)
@@ -26,8 +26,8 @@ class MakePlots():
 		self.plot_fields=plot_fields
 	def make_hist(self): 
 		df = pd.read_csv(self.input_csv)
-		print(df.head())
-		print(self.plot_fields) 
+		#print(df.head())
+		#print(self.plot_fields) 
 		if 'one' in self.input_csv: 
 			category = 'one'
 		elif 'two' in self.input_csv: 
@@ -41,21 +41,27 @@ class MakePlots():
 			category = 'null'
 		fig,ax = plt.subplots(1,2)
 		ax = ax.flatten()
+		#print(ax.shape)
 		colors = ['darkblue','darkred']
 		for i in range(len(self.plot_fields)): 
 			# print(f'count is: {i}')
-			print(f'i is: {i}')
+			#print(f'i is: {i}')
 			# print(df[self.plot_fields[i]])
 			# print(pd.Series(self.plot_fields[i]).value_counts())
 			df[self.plot_fields[i]] = df[self.plot_fields[i]].str.strip()
 			df[self.plot_fields[i]] = df[self.plot_fields[i]].str.lower()
-			ax[i]=pd.Series(df[self.plot_fields[i]]).value_counts().plot(kind='bar',color=colors[i])
+			pd.Series(df[self.plot_fields[i]]).value_counts().plot(kind='bar',color=colors[i],ax=ax[i])
+			#ax.hist(df[self.plot_fields[0]])#pd.Series(df[self.plot_fields[0]]).value_counts().plot(kind='bar',color=colors[0])
 			ax[i].set_xlabel(self.plot_fields[i]);ax[i].set_ylabel('count')
-			ax[i].set_title(f'Uncertainty category {category} distributions') 
+			ax[i].set_title(f'Uncertainty category {category} {self.plot_fields[i]}')
 			if self.plot_fields[i].lower() == 'class': 
-				ax[i].annotate(f'n = {df[self.plot_fields[i]].count()}',xy=(0.8,0.8),xycoords='figure fraction')
-			else: 
-				plt.xticks(rotation=45)
+				print('annotate')
+				print(df[self.plot_fields[i]].count())
+				ax[i].annotate(f'n = {df[self.plot_fields[i]].count()}',xy=(0.4,0.8),xycoords='figure fraction')
+			elif self.plot_fields[i].lower() == 'image_source': 
+				plt.xticks(rotation=0)
+		#fig.suptitle(f'Uncertainty category {category} distributions') 
+		#plt.tight_layout()
 		plt.show()
 		plt.close('all')
 def main(): 
