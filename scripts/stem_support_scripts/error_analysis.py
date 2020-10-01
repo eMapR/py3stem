@@ -36,6 +36,9 @@ import fiona
 from shapely.geometry import shape
 import rasterio.features
 import build_ref_dataset as ref_dataset
+import re
+import glob
+import pyParz
 def rasterize(shp,resolution,output_dest): 
 	"""Convert vector to raster."""
 	input_shp = ogr.Open(shp)
@@ -60,6 +63,8 @@ def calc_zonal_stats(raster,shp,resolution,stat,source,ref_dataset):
 		#construct the transform tuple in the form: top left (x coord), west-east pixel res, rotation (0.0), top left northing (y coord), rotation (0.0), north-south pixel res (-1*res)
 		transform = (src.bounds[0],resolution,0.0,src.bounds[3],0.0,-1*resolution)
 		arr = src.read(1)#.astype('float')
+		if 'stem' in source: 
+			arr = np.where(arr==12,1,0)#input_arr[input_arr==12,1]
 		#arr[arr == None] = 0
 		#arr[arr == np.nan] = 0
 	#rasterstats zonal stats produces a list of dicts, get the value
@@ -327,7 +332,7 @@ class GeneratePoints():
 			# print('exited if statement')
 			# print(arr.shape)
 			# print(type(arr))
-			arr= arr.where(arr==1,drop=True) #changed so that the user can select the value you want 
+			arr= arr.where(arr==0,drop=True) #changed so that the user can select the value you want 
 			# print(arr.shape)
 			# print(arr)
 			new_arr = arr.stack(z=('x','y')).reset_index('z')
@@ -416,7 +421,47 @@ class Polygonize():
 		output_gdf.to_file(self.output_dir+self.input_raster[:-4]+'.shp')
 		#from https://gis.stackexchange.com/questions/187877/how-to-polygonize-raster-to-shapely-polygons
 
+class GlacierSummary(): 
+	def __init__(self,input_raster,mask_raster):
+		self.input_raster=input_raster
+		self.mask_raster=mask_raster
+		
+
+	def mask_rasters(self): 
 	
+		ds1 = gdal.Open(self.input_raster)
+		input_arr = ds1.ReadAsArray()
+		print(input_arr.dtype)
+		#get just the glacier class as a binary raster
+		bin_arr = np.where(input_arr==12,1,0)#input_arr[input_arr==12,1]
+		print(bin_arr.shape)
+		print(bin_arr.max())
+		print(f'bin_arr sum is {np.sum(bin_arr)}')
+		#input_arr[np.isnan(input_arr)] = 0 
+		ds2 = gdal.Open(self.mask_raster)
+		mask_arr = ds2.ReadAsArray()
+		#mask_arr[np.isnan(mask_arr)] = 0 
+		print(f'mask arr max is {mask_arr.max()}')
+		try: 
+			masked = bin_arr * mask_arr
+			print(f'masked max is {masked.max()}')
+			print(masked.shape)
+			print(masked)
+			masked[masked<0]=0
+			mask_sum = np.sum(masked)
+			print(f'mask sum is {mask_sum}')
+			mask_area = mask_sum * 900 #change pixel count to area by multiplying 30m x 30m x pixel count
+			ds1 = None
+			ds2 = None
+			return mask_area
+		except ValueError: 
+			print('fail')
+# def parallel_rasters(args): 
+# 	classified_raster,ref_raster = args
+# 	year = (os.path.split(classified_raster)[1]).split('_')[1]
+# 	glacier_area = GlacierSummary(classified_raster,ref_raster).mask_rasters()
+# 	return year,glacier_area
+
 def main(): 
 	params = sys.argv[1]
 	with open(str(params)) as f:
@@ -427,10 +472,11 @@ def main():
 		resolution = int(variables["resolution"])
 		output_dir = variables["output_dir"]
 		pickle_dir = variables["pickle_dir"]
+		raster_dir = variables['raster_dir']
 		ref_raster = variables["ref_raster"] #previously "/vol/v3/ben_ak/raster_files/glacier_velocity/rgi_cnd_tiles_southern_region_dissolve.tif",
 		classified_raster = variables["classified_raster"]
 		nlcd_raster = variables["nlcd_raster"]
-		#boundary = variables["boundary"]
+		boundary = variables["boundary"]
 		#zoom = variables["zoom"]
 		#hist_raster = variables["hist_raster"]
 		random_pts = variables["random_pts"]
@@ -446,19 +492,61 @@ def main():
 		uncertainty_layer = variables["uncertainty_layer"]
 	t0 = datetime.now()
 	#generate random reference points
-	#pts = GeneratePoints(None,uncertainty_layer,output_dir)
+	#pts = GeneratePoints(None,ref_raster,output_dir)
 	#print(test.pad_raster())
-	#pts.reduce_raster_size()
 	#output_coords = pts.select_random_pts_from_raster(0) #the extra arg can be 0 or 1 currently with 0 being select anything that isn't glacier and 1 being glacier
 	#output = Polygonize(uncertainty_layer,output_dir).raster_to_polygon()
-	
+	#file_list = sorted(glob.glob(raster_dir+'*.tif'))
+	#areas = pyParz.foreach(file_list,parallel_rasters,args=[ref_raster],numThreads=15)
+	#print(areas)
+
+	#generate glacier areas for national parks
+	# df_list = []
+	# df_dict = {}
+	# for shp_file in glob.glob(boundary+'*.shp'): 
+	# 	for file in sorted(glob.glob(raster_dir+'*.tif')): 
+	# 		year = (os.path.split(file)[1]).split('_')[1]
+	# 		stats_df=calc_zonal_stats(file,shp_file,resolution,stat,f'stem_{year}',None)
+	# 		print(stats_df)
+	# 		#df_list.append(stats_df)
+	# 		df_dict.update({year:stats_df[f'stem_{year}_{stat}'][0]})
+	# 	print(df_dict)
+	# 	df = pd.DataFrame(df_dict,index=[0])
+	# 	df.to_csv(output_dir+os.path.split(shp_file)[1][:-4]+'.csv')
+
+	#calculate regional total glacier area
+	year_dict = {}
+	for file in sorted(glob.glob(raster_dir+'*.tif')): 
+		print(file)
+		#year = os.path.split(file)[1][:4]
+		year = (os.path.split(file)[1]).split('_')[1]#.split("model_", 1)[1].split("_", 1)[0].strip()#re.search(r"model_ (\d{4})", os.path.split(file)[1]).group(1) #get the year
+		print(f'year is {year}')
+		glacier_area = GlacierSummary(file,ref_raster).mask_rasters() #this just gets the total number of pixels for one year and one uncertainty level 
+		print(glacier_area)
+		year_dict.update({year:glacier_area})
+
+	print(year_dict)	
+	df = pd.DataFrame(year_dict,index=[0])
+	df.to_csv(output_dir+(os.path.split(ref_raster)[1][:-4])+'.csv')
+
+	# try: 
+	# 	df = pd.DataFrame(year_dict)
+	# 	uncertainty = ref_raster.split(file)[1].split('_')[7] #hardcoded
+	# 	df.to_csv(f"/vol/v3/ben_ak/param_files_rgi/southern_region/output_files/uncertainty_level_{uncertainty}_annual_glacier_area_totals.csv") #hardcoded
+	# 	print(df)
+
+	# except: 
+	# 	df = pd.DataFrame.from_dict(year_dict)
+	# 	df.to_csv(f"/vol/v3/ben_ak/param_files_rgi/southern_region/output_files/uncertainty_level_{uncertainty}_annual_glacier_area_totals.csv") #hardcoded
+	# 	print(df)
+
 	#reclassify(nlcd_raster,nlcd_version,None)
 	#nlcd_disagree_summary(stem_raster)
 	#create_zonal_stats_df(stem_raster,rgi_raster,shapefile,resolution,output_dir,boundary,zoom,pickle_dir,write_to_pickle,stat)
 	#calc_zonal_stats(nlcd_raster,random_pts,resolution,stat,'nlcd')
 	#error_arr = GeneratePoints(uncertainty_layer,None,None).get_class_size()
 	#make confusion matrix
-	calc_confusion_matrix(None,classified_raster,random_pts,resolution,stat,actual_source,predicted_source,model_run,write_to_pickle,pickle_dir,modifier, uncertainty_layer)
+	#calc_confusion_matrix(None,classified_raster,random_pts,resolution,stat,actual_source,predicted_source,model_run,write_to_pickle,pickle_dir,modifier, uncertainty_layer)
 	#extract_raster_pts(nlcd_raster,random_pts,resolution)
 	#rasterize(shapefile,resolution,output_dir)
 	t1 = datetime.now()

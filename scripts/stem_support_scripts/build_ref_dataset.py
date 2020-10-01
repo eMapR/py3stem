@@ -10,7 +10,8 @@ def get_csvs(csv,remove_field,remove_val):
 	df = pd.read_csv(csv)
 	df.index = np.arange(1,len(df)+1)
 
-	df1 = df[df[remove_field]!=remove_val or df[remove_field]!='m'] #remove anything that we wanted to discard in classification
+	df1 = df[df[remove_field]!=remove_val] #remove anything that we wanted to discard in classification
+	df1 = df1[df1[remove_field]!='m']
 	df1 = df1[df1['class']!='u'] #remove the undecided points
 	#print(df.head)
 	#print(df.shape)
