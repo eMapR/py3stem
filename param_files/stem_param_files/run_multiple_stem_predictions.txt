@@ -1,0 +1,6 @@
+{
+"param_dir": "/vol/v3/ben_ak/param_files_rgi/southern_region/glaciers/",
+"predict_script": "/vol/v3/ben_ak/scripts/scripts/predict_stem.py", 
+"mosaic_script": "/vol/v3/ben_ak/scripts/scripts/mosaic_tiles_fix.py", 
+"index":"ndsi"
+}

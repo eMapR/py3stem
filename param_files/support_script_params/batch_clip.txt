@@ -1,0 +1,4 @@
+{
+"raster_dir":"/vol/v3/ben_ak/param_files_rgi/southern_region/output_files/", 
+"input_shape":"/vol/v3/ben_ak/vector_files/stem_processing/rgi_cnd_tiles_southern_region_dissolve_clipped_to_AK.shp"
+}

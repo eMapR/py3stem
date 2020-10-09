@@ -34,7 +34,7 @@ run_params = {
 
 #clipFile = '/vol/v2/datasets/conus_tile_system/conus_tile_system_15_sub_epsg5070.shp'
 #downloadDir = '/vol/v1/proj/drinkingWaterOregonLT/LtChangeDB/westwatersheds/raster/prep/gee_chunks'
-downloadDir = "/vol/v3/ben_ak/gee_outputs/gee_files_ndsi_modis_2000_2019_2_yr_gee_download/"
+downloadDir = "/vol/v3/ben_ak/gee_outputs/gee_files_ndsi_1984_1999_downloads/"
 #outDir = '/vol/v3/LTv4/clipDecomp/'
 timestamp_offset = 40000000 # time in minutes to look back in time for GEE tasks to track
 logFile=True
