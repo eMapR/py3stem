@@ -1,4 +1,5 @@
 {
 "csv_dir": "/vol/v3/ben_ak/param_files_rgi/southern_region/stats/",
-"plot_fields": ["class", "image_source"]
+"plot_fields": ["class", "image_source"], 
+"output_dir":"/vol/v3/ben_ak/param_files_rgi/southern_region/summary_stats/"
 }

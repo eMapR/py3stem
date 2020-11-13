@@ -9,14 +9,26 @@ import matplotlib.pyplot as plt
 def get_csvs(csv,remove_field,remove_val): 
 	df = pd.read_csv(csv)
 	df.index = np.arange(1,len(df)+1)
-
-	df1 = df[df[remove_field]!=remove_val] #remove anything that we wanted to discard in classification
-	df1 = df1[df1[remove_field]!='m']
+	print(df)
+	try: 
+		df1 = df[df[remove_field]!=remove_val] #remove anything that we wanted to discard in classification
+	except KeyError: 
+		print('Maybe there is a different delimiter?')
+	# try: 
+	# 	df = pd.read_csv(csv,sep='\t')
+	# 	print('The df the second time around is: ',df)
+	# 	df.index = np.arange(1,len(df)+1)
+	# 	df1 = df[df[remove_field]!=remove_val] #remove anything that we wanted to discard in classification
+	# except Exception as e: 
+	# 	print(f'The error remains {e}')
+	#df1 = df1[df1[remove_field]!='m']
 	df1 = df1[df1['class']!='u'] #remove the undecided points
+	#df1.replace('', np.NaN).dropna(how='all') #remove the empty lines
 	#print(df.head)
 	#print(df.shape)
 	#recode 
 	df1['binary'] = df1['class'].map({'u': 0, 's': 0,'w':0,'n':0,'g':1,'d':1,'ha':1,'tw':1,'sh':1})
+	#print(df1.head(15))
 	return df1
 
 class MakePlots(): 

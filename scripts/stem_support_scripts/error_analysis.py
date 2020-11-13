@@ -40,13 +40,14 @@ import re
 import glob
 import pyParz
 import make_plots
-def rasterize(shp,resolution,output_dest): 
+def rasterize(shp,resolution,output_dest,extent_bounds): 
 	"""Convert vector to raster."""
 	input_shp = ogr.Open(shp)
 	shp_layer = input_shp.GetLayer()
-
+	extent_raster = rasterio.open(extent_bounds)
+	
 	pixel_size = resolution
-	xmin, xmax, ymin, ymax = shp_layer.GetExtent()
+	xmin, xmax, ymin, ymax = extent_raster.bounds#extent_raster.GetExtent()
 	head,tail = os.path.split(shp)
 	output_raster = output_dest+tail[:-4]+'.tif'
 	print(output_raster)
@@ -59,21 +60,29 @@ def rasterize(shp,resolution,output_dest):
 def calc_zonal_stats(raster,shp,resolution,stat,source,ref_dataset,transform_info): 
 	"""Calculate pixel counts inside polygons."""
 	geo_df = gpd.read_file(shp)
-	if type(raster) == 'str': 
-		with rasterio.open(raster) as src: 
-			#construct the transform tuple in the form: top left (x coord), west-east pixel res, rotation (0.0), top left northing (y coord), rotation (0.0), north-south pixel res (-1*res)
-			transform = (src.bounds[0],resolution,0.0,src.bounds[3],0.0,-1*resolution)
-			arr = src.read(1)#.astype('float')
-			if 'stem' in source: 
-				arr = np.where(arr==12,1,0)#input_arr[input_arr==12,1]
-			#arr[arr == None] = 0
-			#arr[arr == np.nan] = 0
-	else: 
+	try: 
+		if raster.endswith('.tif'): 
+			with rasterio.open(raster) as src: 
+				#construct the transform tuple in the form: top left (x coord), west-east pixel res, rotation (0.0), top left northing (y coord), rotation (0.0), north-south pixel res (-1*res)
+				transform = (src.bounds[0],resolution,0.0,src.bounds[3],0.0,-1*resolution)
+				arr = src.read(1)#.astype('float')
+				if 'stem' in source.lower(): 
+					#print('we are binarizing the input raster')
+					arr = np.where(arr==12,1,0)#input_arr[input_arr==12,1]
+				#arr[arr == None] = 0
+				#arr[arr == np.nan] = 0
+		else: 
+			arr = raster
+			transform = transform_info
+	except Exception as e: 
 		arr = raster
 		transform = transform_info
 	#rasterstats zonal stats produces a list of dicts, get the value
-	stats = zonal_stats(geo_df,arr,stats=stat,transform=transform,nodata=255)
+	stats = zonal_stats(geo_df,arr,stats=stat,transform=transform,nodata=255) #gets the values at the raster pixels for the given points
 	output_geodf = geo_df.join(pd.DataFrame(stats))#.drop(['left','right','top','bottom'])
+	#print('output_geodf stats')
+	#print(output_geodf)
+	#print(output_geodf.shape)
 	#rename cols so they don't get angry when we join
 	old_names = output_geodf.columns
 	new_names = [source+'_'+i for i in old_names]
@@ -90,21 +99,22 @@ def read_pickles(*argv):
 	#head,tail = os.path.split(raster_2)
 	#actual_file = argv[9]+f'{argv[5]}_{argv[10]}_zonal_stats_df'
 	predicted_file = argv[9]+f'{argv[7]}_{argv[6]}_{argv[10]}_zonal_stats_df'
-	if argv[8].lower()=='true': 
+	print(f'predicted file is {predicted_file}')
+	if (argv[8].lower()=='true') and not (os.path.exists(predicted_file)): 
 		print('pickling...')
 		#generate zonal stats and pickle
 		
-		if not os.path.exists(predicted_file): 
-			#print(f'creating new files {actual_file} and {predicted_file}')
-			#actual = calc_zonal_stats(argv[0],argv[2],argv[3],argv[4],argv[5])
-			predicted = calc_zonal_stats(argv[1],argv[2],argv[3],argv[4],argv[6],argv[11])
-			#df = pd.concat([stem_df,rgi_df],axis=1)
-			#actual_ds = pickle.dump(actual, open(actual_file, 'ab' ))
-			predicted_ds = pickle.dump(predicted,open(predicted_file,'ab'))
-			return predicted #remove actual 
-		else: 
-			print('both files already exist')
-			pass
+		#if not os.path.exists(predicted_file): 
+		#print(f'creating new files {actual_file} and {predicted_file}')
+		#actual = calc_zonal_stats(argv[0],argv[2],argv[3],argv[4],argv[5])
+		predicted = calc_zonal_stats(argv[1],argv[2],argv[3],argv[4],argv[6],argv[11],None) #added None 10/12/2020 because the calc_zonal_stats was modified for other uses
+		#df = pd.concat([stem_df,rgi_df],axis=1)
+		#actual_ds = pickle.dump(actual, open(actual_file, 'ab' ))
+		predicted_ds = pickle.dump(predicted,open(predicted_file,'ab'))
+		return predicted #remove actual 
+		# else: 
+		# 	print('both files already exist')
+			
 	else: #read in the pickled df if its the same data
 		print('reading from pickle...')
 		#actual_df = pickle.load(open(actual_file,'rb'))
@@ -120,50 +130,60 @@ def calc_confusion_matrix(*argv):#actual_source,predicted_source,stat,):
 	data = read_pickles(*argv)
 	#print(data)
 	actual = ref_dataset.get_csvs(argv[11],'discard','y').replace(np.nan,0)#previously getting values from raster, now getting from ref dataset csv
-	print('id col for actual is: ', actual.id)
-	print(f'shape is: {actual.shape}')
-	#actual.index = np.arange(1,len(actual)+1)#actual.set_index(range(1,actual.shape[0]))
-	#df.index = np.arange(1, len(df) + 1)
-	#print(actual)
-	#print(actual.shape)
+
 	predicted = data.replace(np.nan,0)#read_pickles(*argv)[1].replace(np.nan,0)#calc_zonal_stats(predicted_raster,shp,resolution,stat,predicted_source)
 	predicted.index = np.arange(1,len(predicted)+1)
 	predicted = predicted[predicted.index.isin(actual.index)] 
-	# actual.rename(columns={'2001_NLCD_classification_southern_region_id':'id'},inplace=True) predicted[predicted.set_index([range(1,predicted.shape[0])]).index.isin(predicted.set_index(['id']).index)]
-	# actual = pd.merge(actual, predicted, left_on='id',how='left', indicator=True) \
- #           .query("_merge == 'left_only'") \
- #           .drop('_merge',1)
-	#print('actual is:', actual['lat'],actual['lon'])
-	#print(f'actual shape is {actual.shape}')
-	#print(predicted.columns)
-	#print('predicted is: ', predicted['2017_stem_class_one_lat'],predicted['2017_stem_class_one_lon'])
-	#print(f'predicted shape is {predicted.shape}')
-	#print(actual.head())
-	#print(predicted.head())
+	
+	#print('actual is: ',actual)
+	#print('predicted is: ',predicted)
 	actual_col = actual['binary']#actual[str(argv[5]+'_'+argv[4])]
 	predicted_col = predicted[str(argv[6]+'_'+argv[4])]
 	#print(actual_col.unique())
 	#print(predicted_col.unique())
 	actual_ls = [float(i) for i in list(actual_col)]
 	predicted_ls = [float(i) for i in list(predicted_col)]
+	actual_ids = actual.index
+	predicted_ids = predicted.index
+	
+
+	#get the points that are not agreeing so we can see where in the world that is happening
+	incorrect = pd.DataFrame([actual_ids,predicted_ids,list(actual.lat),list(actual.lon),actual_ls,predicted_ls]).T
+	incorrect.columns=['actual_id','pred_id','lat','lon','actual_val','pred_val']
+	print(incorrect.shape)
+	incorrect=incorrect[incorrect['actual_val']!=incorrect['pred_val']]
+	print(incorrect)
+	print(incorrect.shape)
+	
+
 	labels = sorted(list(set(list(actual_col)+list(predicted_col))))
-	#print(labels)
+
 	results = confusion_matrix(actual_ls, predicted_ls,labels) 
 	#disp = plot_confusion_matrix(None,actual_ls,predicted_ls,display_labels=labels,cmap=plt.cm.Blues)
 	#fig,(ax,ax1) = plt.subplots(nrows=1,ncols=2)
 	ax=plt.subplot()
 	sns.heatmap(results,annot=True,ax=ax,fmt='g')
 	ax.set_xlabel('Predicted labels');ax.set_ylabel('True labels')
-	ax.set_title(f'Confusion Matrix: {argv[5]} {argv[6]} {argv[7]} model run') 
+	ax.set_title(f'{argv[6]} {argv[10]}') 
 	ax.set_xticklabels(labels)
 	ax.set_yticklabels(labels)
-	print(results) 
-	print ('Accuracy Score :',accuracy_score(actual_ls, predicted_ls))
-	print ('Report : ')
-	print (classification_report(actual_ls, predicted_ls))
+	#print(results) 
+	# print ('Accuracy Score :',accuracy_score(actual_ls, predicted_ls))
+	# print ('Report : ')
+	# print (classification_report(actual_ls, predicted_ls))
+	print(classification_report(actual_ls,predicted_ls))
+	classification_output = pd.DataFrame(classification_report(actual_ls,predicted_ls,output_dict=True)).transpose().reset_index().rename(columns={'index':'stat'})
+	classification_output['model_accuracy'] = accuracy_score(actual_ls,predicted_ls)
+	print('output is: ', classification_output)
+	print(classification_output.index)
+	#print('output is: ',type(classification_report(actual_ls,predicted_ls,output_dict=True)))
+	# 	report = classification_report(y_test, y_pred, output_dict=True)
+	# and then construct a Dataframe and transpose it:
+
+	# df = pandas.DataFrame(report).transpose()
 	plt.show()
 	plt.close('all')
-
+	return classification_output, incorrect
 
 def create_zonal_stats_df(stem_raster,rgi_raster,shp,resolution,output_dir,boundary,zoom,pickle_dir,read_from_pickle,stat): 
 	"""A helper function for calc_zonal_stats."""
@@ -316,7 +336,7 @@ class GeneratePoints():
 			print(arr)
 			#arr = arr.flatten()
 			print(arr.shape)
-	def select_random_pts_from_raster(self,target_value):
+	def select_random_pts_from_raster(self,target_value,num_pts):
 		"""From an input raster select a random subset of points (pixels)."""
 
 		#read in the raster
@@ -333,35 +353,13 @@ class GeneratePoints():
 
 			else: 
 				print('the shape of your array is: ', arr.shape)
-			# print('exited if statement')
-			# print(arr.shape)
-			# print(type(arr))
-			arr= arr.where(arr==0,drop=True) #changed so that the user can select the value you want 
-			# print(arr.shape)
-			# print(arr)
+			arr= arr.where(arr==target_value,drop=True) #changed so that the user can select the value you want 
 			new_arr = arr.stack(z=('x','y')).reset_index('z')
 			new_arr = new_arr.dropna('z',how='any')
-			print('passed the new_arr')
-			
-			# print(new_arr)
 			subset_list = []
 			coords_list = []
 			seed(1)
-		# 	print(arr)
-		# # 	print(arr.values.sum())
-			#indices = [9*i + x for i, x in enumerate(sorted(np.random.choice(range(0,arr.shape[0]), 500,replace=False)))]
-			# if target_value == 0: 
-			# 	subset = np.random.choice(range(0, new_arr.shape[0]), 34810150,replace=False)
-			# 	print('created subset')
-			# 	for i in subset: 
-			# 		#i = int(i)
-			# 		subset_list.append(tuple([float(new_arr[int(i)].coords['y'].values),float(new_arr[int(i)].coords['x'].values),float(new_arr[int(i)].coords['band'].values)]))#append a tuple of coords in the form row,col
-			# 	subset_arr = np.array(subset_list)
-			# 	coords_list = np.random.choice(subset_arr,500,replace=False)
-			# 	print('the coords list here is: ', print(coords_list))
-
-	
-			indices = np.random.choice(range(0, new_arr.shape[0]), 500,replace=False)
+			indices = np.random.choice(range(0, new_arr.shape[0]), num_pts,replace=False)
 			for i in indices: 
 				i = int(i)
 				coords_list.append(tuple([float(new_arr[int(i)].coords['y'].values),float(new_arr[int(i)].coords['x'].values),float(new_arr[int(i)].coords['band'].values)]))#append a tuple of coords in the form row,col
@@ -373,15 +371,8 @@ class GeneratePoints():
 			#write out 
 			out_filename = os.path.split(self.dif_raster)[1][:-4]
 			#write a shapefile
-			gdf.to_file(self.output_dir+out_filename+'.shp')#"/vol/v3/ben_ak/vector_files/glacier_outlines/revised_class_1_output_23.shp")#, driver='GeoJSON')
+			gdf.to_file(self.output_dir+out_filename+f'_{num_pts}_class_{target_value}.shp')
 			gdf.to_csv(out_filename+'.csv')
-
-			#print(gdf)
-			# output_file = self.dif_raster[:-4]+'_subset_test.tif'
-			# with rasterio.open(output_file, 'w', **profile) as dst: 
-			# 	dst.write(arr)
-		# 		# seed random number generator
-		#print(coords_list[0])
 
 		return gdf
 class Polygonize(): 
@@ -426,32 +417,39 @@ class Polygonize():
 		#from https://gis.stackexchange.com/questions/187877/how-to-polygonize-raster-to-shapely-polygons
 
 class GlacierSummary(): 
-	def __init__(self,input_raster,mask_raster):
+	def __init__(self,input_raster,mask_raster,region):
 		self.input_raster=input_raster
 		self.mask_raster=mask_raster
+		self.region = region
 		
 	def mask_rasters(self,class_code,resolution): 
 		"""Get two rasters, binarize a LULC map raster for a class (class_code) and then select subset based on mask."""
 		ds1 = gdal.Open(self.input_raster)
 		input_arr = ds1.ReadAsArray()
-		print(input_arr)
-		print(f'input_arr max is {input_arr.max()} and should be 95')
+		#print(input_arr)
+		#print(f'input_arr max is {input_arr.max()} and should be 95')
 		ulx, xres, xskew, uly, yskew, yres  = ds1.GetGeoTransform()
 
 		transform = (ulx,resolution,0.0,uly,0.0,-1*resolution)
 		#get just the glacier class as a binary raster
-		bin_arr = np.where(input_arr==class_code,1,0)#input_arr[input_arr==12,1]
+		input_arr[input_arr==class_code] = 1#np.where(input_arr==class_code,1,0)#input_arr[input_arr==12,1]
+		bin_arr = input_arr
+		bin_arr[bin_arr!=1] = 0 
 		#input_arr[np.isnan(input_arr)] = 0 
 		ds2 = gdal.Open(self.mask_raster)
+		ds3 = gdal.Open(self.region)
 		mask_arr = ds2.ReadAsArray()
+		region_arr = ds3.ReadAsArray()
+		region_arr[region_arr!=1]=0
 		try: 
-			masked = bin_arr * mask_arr
-			print(f'masked max is {masked.max()}')
+			masked = bin_arr * mask_arr * region_arr
+			#print(f'masked max is {masked.max()}')
 			print(masked.shape)
-			print(masked)
-			masked[masked<0]=0
+			#print(masked)
+			#masked[masked<0]=0
 			ds1=None
 			ds2=None
+			ds3=None
 			return masked,transform
 		except ValueError: 
 			print('fail')
@@ -459,6 +457,7 @@ class GlacierSummary():
 
 	def mask_and_sum_rasters(self,arr,spatial_res): 
 		"""Sum a binary array which came from a binary raster."""
+
 		mask_sum = np.sum(arr)
 		mask_area = mask_sum * spatial_res *spatial_res #change pixel count to area by multiplying 30m x 30m x pixel count
 		return mask_area
@@ -469,7 +468,13 @@ class GlacierSummary():
 # 	year = (os.path.split(classified_raster)[1]).split('_')[1]
 # 	glacier_area = GlacierSummary(classified_raster,ref_raster).mask_rasters()
 # 	return year,glacier_area
-
+def run_in_parallel(args): 
+	region,raster_dir,qualifier,mask_raster=args
+	for file in glob.glob(raster_dir+qualifier):
+		print('file is: ',file)
+		region_mask=GlacierSummary(file,mask_raster,region).mask_rasters(12,30.0) 
+		region_sum = GlacierSummary(None,None,None).mask_and_sum_rasters(region_mask,30.0)
+		print(region_sum)
 def main(): 
 	params = sys.argv[1]
 	with open(str(params)) as f:
@@ -501,12 +506,7 @@ def main():
 	t0 = datetime.now()
 	#generate random reference points
 	#pts = GeneratePoints(None,ref_raster,output_dir)
-	#print(test.pad_raster())
-	#output_coords = pts.select_random_pts_from_raster(0) #the extra arg can be 0 or 1 currently with 0 being select anything that isn't glacier and 1 being glacier
-	#output = Polygonize(uncertainty_layer,output_dir).raster_to_polygon()
-	#file_list = sorted(glob.glob(raster_dir+'*.tif'))
-	#areas = pyParz.foreach(file_list,parallel_rasters,args=[ref_raster],numThreads=15)
-	#print(areas)
+	#output_coords = pts.select_random_pts_from_raster(1,10000) #the extra arg can be 0 or 1 currently with 0 being select anything that isn't glacier and 1 being glacier. The other number is the # of pts you want to generate
 
 	#calculate regional total glacier area
 	# year_dict = {}
@@ -523,57 +523,88 @@ def main():
 	# print(year_dict)	
 	# df = pd.DataFrame(year_dict,index=[0])
 	# df.to_csv(output_dir+(os.path.split(ref_raster)[1][:-4])+'_clipped.csv')
-
+	#generate areas for climate regions
+	#climate_regions = glob.glob(boundary+'*.tif')
+	#print(climate_regions)
+	#region_areas = pyParz.foreach(climate_regions,run_in_parallel,args=[raster_dir,'*2016_full_run_vote.tif',ref_raster],numThreads=5)
+	# df_dict = {}
+	# arr_dict = {}
+	# #make the arrays
+	# df_dict = {}
+	# for region_file in sorted(glob.glob(boundary+'*.tif')): 
+	# 	#if ('denali' in shp_file) or ('wrangall' in shp_file) or ('glacier' in shp_file): 
+	# 	uncertainty_level = make_plots.MakePlots(None,None,None,None,None).check_field(ref_raster)
+	# 	output_file=output_dir+os.path.split(region_file)[1][:-4]+f'_{uncertainty_level}_2016_nlcd_climate_regions.csv'
+	# 	if not os.path.exists(output_file): 
+	# 		for file in sorted(glob.glob(raster_dir+'*2016_full_run_vote.tif')): 
+	# 			year = (os.path.split(file)[1]).split('_')[1]
+	# 			# masked = GlacierSummary(file,ref_raster).mask_rasters(12,resolution)
+	# 			# arr = masked[0]
+	# 			# transform = masked[1]
+	# 			# stats_df=calc_zonal_stats(arr,shp_file,resolution,stat,f'stem_{year}',None,transform)
+	# 			# print(stats_df)
+	# 			region_mask=GlacierSummary(file,ref_raster,region_file).mask_rasters(12,30.0) 
+	# 			region_sum = GlacierSummary(None,None,None).mask_and_sum_rasters(region_mask,30.0)
+	# 			print(region_sum)
+	# 			#sum_value = stats_df[f'stem_{year}_{stat}'][0]
+	# 			#if sum_value == 0: 
+	# 			#	break
+	# 			#else: 
+	# 			#	df_dict.update({year:sum_value})
+	# 		print(df_dict)
+	# 		df = pd.DataFrame(df_dict,index=[0])
+	# 		df.to_csv(output_file)#output_dir+os.path.split(shp_file)[1][:-4]+f'_{uncertainty_level}_updated.csv')
+	# 	else: 
+	# 		print('that file exists')
+	# for file in glob.glob(raster_dir+qualifier):
+	# 	print('file is: ',file)
+	# 	region_mask=GlacierSummary(file,mask_raster,region).mask_rasters(12,30.0) 
+	# 	region_sum = GlacierSummary(None,None,None).mask_and_sum_rasters(region_mask,30.0)
+	# 	print(region_sum)
 	#generate glacier areas for national parks
 	# df_dict = {}
 	# arr_dict = {}
-	#make the arrays
-	df_dict = {}
-	for shp_file in sorted(glob.glob(boundary+'*.shp')): 
-		#if ('denali' in shp_file) or ('wrangall' in shp_file) or ('glacier' in shp_file): 
-		uncertainty_level = make_plots.MakePlots(None,None,None,None).check_field(ref_raster)
-		output_file=output_dir+os.path.split(shp_file)[1][:-4]+f'_{uncertainty_level}_2016_nlcd.csv'
-		if not os.path.exists(output_file): 
-			print(shp_file)
-			for file in sorted(glob.glob(raster_dir+'*2016_full_run_vote.tif')): 
-				print(file)
-				year = (os.path.split(file)[1]).split('_')[1]
-				masked = GlacierSummary(file,ref_raster).mask_rasters(12,resolution)
-				arr = masked[0]
-				transform = masked[1]
-				stats_df=calc_zonal_stats(arr,shp_file,resolution,stat,f'stem_{year}',None,transform)
-				print(stats_df)
-				sum_value = stats_df[f'stem_{year}_{stat}'][0]
-				if sum_value == 0: 
-					break
-				else: 
-					df_dict.update({year:sum_value})
-			print(df_dict)
-			df = pd.DataFrame(df_dict,index=[0])
-			df.to_csv(output_file)#output_dir+os.path.split(shp_file)[1][:-4]+f'_{uncertainty_level}_updated.csv')
-		else: 
-			print('that file exists')
+	# #make the arrays
+	# df_dict = {}
+	# for shp_file in sorted(glob.glob(boundary+'*.shp')): 
+	# 	#if ('denali' in shp_file) or ('wrangall' in shp_file) or ('glacier' in shp_file): 
+	# 	uncertainty_level = make_plots.MakePlots(None,None,None,None,None).check_field(ref_raster)
+	# 	output_file=output_dir+os.path.split(shp_file)[1][:-4]+f'_{uncertainty_level}_2016_nlcd_climate_regions.csv'
+	# 	if not os.path.exists(output_file): 
+	# 		print(shp_file)
+	# 		for file in sorted(glob.glob(raster_dir+'*2016_full_run_vote.tif')): 
+	# 			print(file)
+	# 			year = (os.path.split(file)[1]).split('_')[1]
+	# 			masked = GlacierSummary(file,ref_raster).mask_rasters(12,resolution)
+	# 			arr = masked[0]
+	# 			transform = masked[1]
+	# 			stats_df=calc_zonal_stats(arr,shp_file,resolution,stat,f'stem_{year}',None,transform)
+	# 			print(stats_df)
+	# 			sum_value = stats_df[f'stem_{year}_{stat}'][0]
+	# 			if sum_value == 0: 
+	# 				break
+	# 			else: 
+	# 				df_dict.update({year:sum_value})
+	# 		print(df_dict)
+	# 		df = pd.DataFrame(df_dict,index=[0])
+	# 		df.to_csv(output_file)#output_dir+os.path.split(shp_file)[1][:-4]+f'_{uncertainty_level}_updated.csv')
+	# 	else: 
+	# 		print('that file exists')
 
-	# try: 
-	# 	df = pd.DataFrame(year_dict)
-	# 	uncertainty = ref_raster.split(file)[1].split('_')[7] #hardcoded
-	# 	df.to_csv(f"/vol/v3/ben_ak/param_files_rgi/southern_region/output_files/uncertainty_level_{uncertainty}_annual_glacier_area_totals.csv") #hardcoded
-	# 	print(df)
-
-	# except: 
-	# 	df = pd.DataFrame.from_dict(year_dict)
-	# 	df.to_csv(f"/vol/v3/ben_ak/param_files_rgi/southern_region/output_files/uncertainty_level_{uncertainty}_annual_glacier_area_totals.csv") #hardcoded
-	# 	print(df)
+	
 
 	#reclassify(nlcd_raster,nlcd_version,None)
 	#nlcd_disagree_summary(stem_raster)
 	#create_zonal_stats_df(stem_raster,rgi_raster,shapefile,resolution,output_dir,boundary,zoom,pickle_dir,write_to_pickle,stat)
 	#calc_zonal_stats(nlcd_raster,random_pts,resolution,stat,'nlcd')
 	#error_arr = GeneratePoints(uncertainty_layer,None,None).get_class_size()
+
 	#make confusion matrix
-	#calc_confusion_matrix(None,classified_raster,random_pts,resolution,stat,actual_source,predicted_source,model_run,write_to_pickle,pickle_dir,modifier, uncertainty_layer)
+	calc_confusion_matrix(None,classified_raster,random_pts,resolution,stat,actual_source,predicted_source,model_run,write_to_pickle,pickle_dir,modifier,uncertainty_layer)
+	
 	#extract_raster_pts(nlcd_raster,random_pts,resolution)
-	#rasterize(shapefile,resolution,output_dir)
+	# for file in glob.glob(boundary+'*.shp'): 
+	# 	rasterize(file,resolution,output_dir,ref_raster)
 	t1 = datetime.now()
 	print((t1-t0)/60)
 if __name__ == '__main__':

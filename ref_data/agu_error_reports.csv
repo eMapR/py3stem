@@ -1,0 +1,43 @@
+Northern region 																											
+																											
+	precision	recall	f1-score	support	model_accuracy																						
+0           0.0	0.940092	1	0.969121	204	0.940092																						
+1           1.0	0	0	0	13	0.940092																						
+2      accuracy	0.940092	0.940092	0.940092	0.940092	0.940092																						
+3     macro avg	0.470046	0.5	0.484561	217	0.940092																						
+4  weighted avg	0.883773	0.940092	0.911063	217	0.940092																						
+																											
+																											
+Southern region 																											
+Low certainty									medium certainty 											high certainty 							
+	 precision	recall	f1-score	support  model_accuracy						stat	precision	recall	f1-score	support	model_accuracy						stat	precision	recall	f1-score	support	model_accuracy	
+0	0	0.754647	0.780769	0.767486  260.000000	0.651558				0	0	0.171053	0.433333	0.245283	30		0.778393				0	0	0	0	0	0	0.920177	
+1	1	0.321429	0.290323	0.305085   93.000000	0.651558				1	1	0.940351	0.809668	0.87013	331		0.778393				1	1	1	0.920177	0.95843	451	0.920177	
+2	accuracy	0.651558	0.651558	0.651558    0.651558	0.651558				2	accuracy	0.778393	0.778393	0.778393	0.778393		0.778393				2	accuracy	0.920177	0.920177	0.920177	0.920177	0.920177	
+3	macro avg	0.538038	0.535546	0.536285  353.000000	0.651558				3	macro	avg	0.555702	0.621501	0.557706	361	0.778393				3	macro	avg	0.5	0.460089	0.479215	451	0.920177
+4	weighted avg	0.640513	0.651558	0.645663  353.000000	0.651558				4	weighted	avg	0.87642	0.778393	0.818204	361	0.778393				4	weighted	avg	1	0.920177	0.95843	451	0.920177
+																											
+																											
+																											
+																											
+																											
+																											
+		Non-glacier	Glacier																								
+																											
+	Precision	0.75	0.32																								
+	Recall	0.78	0.29																								
+	f1-score	0.77	0.31																								
+	N	260.00	93.00																								
+	Model	0.65																									
+																											
+	Precision	0.17	0.94																								
+	Recall	0.43	0.81																								
+	f1-score	0.25	0.87																								
+	N	30.00	331.00																								
+	Model	0.78																									
+																											
+	Precision	0.00	1.00																								
+	Recall	0.00	0.92																								
+	f1-score	0.00	0.96																								
+	N	0.00	451.00																								
+	Model	0.92																									

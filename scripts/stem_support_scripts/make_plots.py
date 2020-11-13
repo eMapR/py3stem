@@ -71,6 +71,9 @@ class MakePlots():
 		count = 0
 		for file1,file2,file3 in zip(self.file_list1,self.file_list2,self.file_list3): #list of file paths
 			try: 
+				print(file1)
+				print(file2)
+				print(file3)
 				df1 = pd.read_csv(file1)
 				df2 = pd.read_csv(file2)
 				df3 = pd.read_csv(file3)
@@ -102,9 +105,12 @@ class MakePlots():
 				plot_df3 = df3.T.reset_index().rename(columns={'index':'year',0:'area'})
 				#plot_df['plus_two_std'] = plot_df.area+(plot_df.area.std()*2)
 				#plot_df['minus_two_std'] = plot_df.area-(plot_df.area.std()*2) 
-				sns.lineplot(data=plot_df1,x='year',y='area',ax=ax[count],color='darkred',label='NDSI NLCD 2001',legend=False)#.plot(df.T)
-				sns.lineplot(data=plot_df2,x='year',y='area',ax=ax[count],color='darkblue',label='TCB NLCD 2001',legend=False)#.plot(df.T)
-				sns.lineplot(data=plot_df3,x='year',y='area',ax=ax[count],color='green',label='NDSI NLCD 2016',legend=False)#.plot(df.T)
+				plots_combined = pd.concat([plot_df1,plot_df2,plot_df3])
+				sns.lineplot(data=plots_combined,x='year',y='area',ax=ax[count],color='darkblue')#,label='NDSI NLCD 2001',legend=False)#.plot(df.T) #changed to plot them all with CI 11/12/2020
+
+				# sns.lineplot(data=plot_df1,x='year',y='area',ax=ax[count],color='darkred',label='NDSI NLCD 2001',legend=False)#.plot(df.T)
+				# sns.lineplot(data=plot_df2,x='year',y='area',ax=ax[count],color='darkblue',label='TCB NLCD 2001',legend=False)#.plot(df.T)
+				# sns.lineplot(data=plot_df3,x='year',y='area',ax=ax[count],color='green',label='NDSI NLCD 2016',legend=False)#.plot(df.T)
 
 				#ax[count].fill_between(plot_df['year'], plot_df['plus_two_std'], plot_df['minus_two_std'], color='darkred', alpha=.1)
 				ax[count].tick_params(axis='x', rotation=90)
@@ -114,9 +120,9 @@ class MakePlots():
 				#ax[count].set_ylabel('Glacier covered area (sqare km')
 				if not category == 'null_value':
 					ax[count].set_title(f'{(uncertainty_dict[str(category)]).title()} level of certainty')
-				else: # " ".join(["John", "Charles", "Smith"])
-					ax[count].set_title(" ".join(filename[:-4].split('_')).title())
-				fig.text(0.002, 0.5, 'Glacier covered area (square km)', va='center', rotation='vertical')
+				else: 
+					ax[count].set_title(" ".join(filename[:-4].split('_')[:-2]).title())
+				fig.text(0.002, 0.5, 'Glacier covered area (square km)', va='center', rotation='vertical',fontsize=10)
 				#plt.setp(ax[:, 0], ylabel='Glacier covered area (square km)')
 
 				count += 1 
@@ -126,12 +132,60 @@ class MakePlots():
 			#ax[count].set_xticks(rotation=90)
 		#plt.tight_layout()
 		#plt.legend()
+		fig.suptitle('High certainty glacier covered areas', fontsize=14) #hardcoded, needs to be changed
 		ax[nrows-1].legend()
 		plt.show()
 		plt.close('all')
 
+	def summarize_area_diff(self,output_dir): 
+		dict_2001 = {}
+		dict_2019 = {}
+		for file1,file2,file3 in zip(self.file_list1,self.file_list2,self.file_list3):
+			park_name = os.path.split(file1)[1][:-4]
+			df1 = pd.read_csv(file1)
+			df2 = pd.read_csv(file2)
+			df3 = pd.read_csv(file3)
+			print(df1,df2,df3)
+			for column1,column2,column3 in zip(df1.columns,df2.columns,df3.columns): #get rid of non-year cols 
+					try: 
+						int(column1)
+					except ValueError:
+						print('col was not a year col, dropping')
+						df1=df1.drop(columns=[column1])
+						df2=df2.drop(columns=[column2])
+						df3=df3.drop(columns=[column3])
+				#plot_df = df.T.reset_index().rename(columns={'index':'year',0:'area'})
+			df1 = (df1*900)/1000000 #convert to square kms
+			df2 = (df2*900)/1000000
+			df3 = (df3*900)/1000000
+			dict_2001.update({park_name:[df1['2001'].iloc[0],df2['2001'].iloc[0],df3['2001'].iloc[0]]})
+			dict_2019.update({park_name:[df1['2019'].iloc[0],df2['2019'].iloc[0],df3['2019'].iloc[0]]})
+		output_df_2001 = pd.DataFrame(dict_2001)
+		output_df_2019 = pd.DataFrame(dict_2019)
+		output_df_2001.loc['total']= output_df_2001.sum()
+		output_df_2019.loc['total']= output_df_2019.sum()
+		output_df_2001.to_csv(output_dir+f'nps_2001_{park_name.split("_")[-1]}.csv')
+		output_df_2019.to_csv(output_dir+f'nps_2019_{park_name.split("_")[-1]}.csv')
+		print(output_df_2019)
 
 		
+	def plot_area_proportions(self,nrows,ncols):
+		fig,ax = plt.subplots(nrows,ncols)
+		df1 = pd.read_csv(self.file_list1[0],skipfooter=1,index_col=0)#read in except the last line which is totals
+		#df2 = pd.read_csv(self.file_list1,skipfooter=1)
+		#df3 = pd.read_csv(self.file_list1,skipfooter=1)
+		ax = ax.flatten()
+		for i in range(0,(nrows*ncols)): 
+			ax[i].pie(df1.iloc[:,i],labels=df1.index)
+			plot_title =  " ".join(df1.columns[i].split('_')[:-2]).title()#df1.columns[i].replace("_", " ")#[' '.join(x.split('_')) for x in df1.columns[i]]#[x.replace('_', ' ') for x in df1.columns[i]]
+			ax[i].set_title(plot_title)
+
+		fig.suptitle('Year 2001 model TCB NLCD 2001', fontsize=14) #hardcoded, needs to be changed
+		#plt.legend()
+		plt.tight_layout()
+		plt.show()
+		plt.close('all')
+
 def main(): 
 	params = sys.argv[1]
 	with open(str(params)) as f:
@@ -139,6 +193,7 @@ def main():
 		csv_dir= variables["csv_dir"]
 		#plot_fields = list(variables['plot_fields'])
 		plot_fields = variables['plot_fields']
+		output_dir = variables['output_dir']
 		#print(type(plot_fields))
 	# for file in glob.glob(csv_dir+'*.csv'): 
 	# 	plots = MakePlots(file,plot_fields,None)
@@ -150,31 +205,43 @@ def main():
 	# for file in glob.glob(csv_dir+'*one_.csv'): 
 	# 	print(f'file is: {file}')
 	# 	category = MakePlots(file,None,None).check_field('null_value') #tells us if this is regional or nps
-		#print(f'category is: {category}')
+	# 	print(f'category is: {category}')
 	# 	if not category == 'null_value': 
 	# 		regional_list.append(file)
 	# 	else: 
 	# 		np_list.append(file)
 	# print(np_list)
 	# ["class", "image_source"]   
-	#print('regional list is', regional_list)
-	#print('np list is', np_list)
-	#MakePlots(None,None,regional_list).make_line(1,3) #just plots for the three certainty levels
-	ndsi_nlcd_2001 = glob.glob(csv_dir+'*two_corrected.csv')
-	ndsi_nlcd_2016 = glob.glob(csv_dir+'*two_2016_nlcd.csv')
-	tcb_nlcd_2001 = glob.glob(csv_dir+'*two_tcb.csv')
-
+	# print('regional list is', regional_list)
+	# print('np list is', np_list)
+	# MakePlots(None,None,regional_list).make_line(1,3) #just plots for the three certainty levels
+	#get the summary csvs- you need to change the number that you want for the certainty level 
+	ndsi_nlcd_2001 = glob.glob(csv_dir+'*three_corrected.csv')
+	ndsi_nlcd_2016 = glob.glob(csv_dir+'*three_2016_nlcd.csv')
+	tcb_nlcd_2001 = glob.glob(csv_dir+'*three_tcb.csv')
+	
 	ndsi_nlcd_2001 = sorted([x for x in ndsi_nlcd_2001 if not ('alagnak' in x or 'aniakchak' in x or 'katmai_national_preserve' in x or 'glacier_bay_national_preserve' in x)]) #[i for i in sents if not ('@$\t' in i or '#' in i)]
 	ndsi_nlcd_2016 = sorted([x for x in ndsi_nlcd_2016 if not ('alagnak' in x or 'aniakchak' in x or 'katmai_national_preserve' in x or 'glacier_bay_national_preserve' in x)]) 
 	tcb_nlcd_2001 = sorted([x for x in tcb_nlcd_2001 if not ('alagnak' in x or 'aniakchak' in x or 'katmai_national_preserve' in x or 'glacier_bay_national_preserve' in x)])
-	# for file1,file2 in zip(ndsi_nlcd_2001,tcb_nldc_2001): 
-	# 	if ('alagnak' in file1) or ('aniakchak' in file1) or ('katmai_national_preserve' in file1) or ('glacier_bay_national_preserve' in file1): 
-	# 		print('No stats or no glaciers for that park for file1, skipping')
-	# 	elif ('alagnak' in file2) or ('aniakchak' in file2) or ('katmai_national_preserve' in file2) or ('glacier_bay_national_preserve' in file2): 
-	print(ndsi_nlcd_2001)
-	print(tcb_nlcd_2001)
+	
+	#use to make plots of area for nps for different models
 	MakePlots(None,None,ndsi_nlcd_2001,tcb_nlcd_2001,ndsi_nlcd_2016).make_line(3,3)
 	#MakePlots(None,None,np_list).make_line(3,3)
+	#####################################################################
+	#make pie charts comparing area of different certainty levels
+	# input_list = glob.glob(csv_dir+'*tcb.csv')
+	# print(input_list)
+	# MakePlots(None,None,input_list,None,None).plot_area_proportions(3,3)
+	#####################################################################
+	#make csvs that summarize the output stats from different model runs
+	# one = glob.glob(csv_dir+'*one_tcb.csv')
+	# two = glob.glob(csv_dir+'*two_tcb.csv')
+	# three = glob.glob(csv_dir+'*three_tcb.csv')
+	# one = sorted([x for x in one if not ('alagnak' in x or 'aniakchak' in x or 'katmai_national_preserve' in x or 'glacier_bay_national_preserve' in x)]) 
+	# two = sorted([x for x in two if not ('alagnak' in x or 'aniakchak' in x or 'katmai_national_preserve' in x or 'glacier_bay_national_preserve' in x)]) 
+	# three = sorted([x for x in three if not ('alagnak' in x or 'aniakchak' in x or 'katmai_national_preserve' in x or 'glacier_bay_national_preserve' in x)]) 
+
+	# MakePlots(None,None,one,two,three).summarize_area_diff(output_dir)
 if __name__ == '__main__':
 	main()
 

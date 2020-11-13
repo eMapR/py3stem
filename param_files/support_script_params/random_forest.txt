@@ -1,0 +1,5 @@
+{
+"train_set":"/vol/v3/ben_ak/excel_files/random_forest/glcm_tile_18_full_bands_5x5_two_class.csv", 
+"output_dir":"/vol/v3/ben_ak/area_corrections/southern_region/", 
+"year_of_interest":"2001"
+}
