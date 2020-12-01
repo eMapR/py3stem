@@ -3,7 +3,7 @@ These scripts act as an accompaniment to the pystem repository also here on the 
 
 ## Script documentation 
 ###### Generate multi-annual composites: 
-`py3stem/scripts/multi_year_comps/`
+```py3stem/scripts/multi_year_comps/```
 Please see the [documentation](https://docs.google.com/document/d/1jZlcqwqajsnpDLvuhBNi60GB3Wl95gbMG19IYUxq2E4/edit?usp=sharing) on generating multi-annual composite fitted images using Google Earth Engine 
 
 
