@@ -1,6 +1,3 @@
-*multi_year_comps*
-[Documentation](https://docs.google.com/document/d/1jZlcqwqajsnpDLvuhBNi60GB3Wl95gbMG19IYUxq2E4/edit?usp=sharing)
-
 
 error_analysis.py
 Required inputs- error_analysis.txt (param_file)
