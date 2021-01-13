@@ -14,13 +14,13 @@ def get_csvs(csv,remove_field,remove_val):
 		df1 = df[df[remove_field]!=remove_val] #remove anything that we wanted to discard in classification
 	except KeyError: 
 		print('Maybe there is a different delimiter?')
-	# try: 
-	# 	df = pd.read_csv(csv,sep='\t')
-	# 	print('The df the second time around is: ',df)
-	# 	df.index = np.arange(1,len(df)+1)
-	# 	df1 = df[df[remove_field]!=remove_val] #remove anything that we wanted to discard in classification
-	# except Exception as e: 
-	# 	print(f'The error remains {e}')
+	try: 
+		df = pd.read_csv(csv,sep='\t')
+		print('The df the second time around is: ',df)
+		df.index = np.arange(1,len(df)+1)
+		df1 = df[df[remove_field]!=remove_val] #remove anything that we wanted to discard in classification
+	except Exception as e: 
+		print(f'The error remains {e}')
 	#df1 = df1[df1[remove_field]!='m']
 	df1 = df1[df1['class']!='u'] #remove the undecided points
 	#df1.replace('', np.NaN).dropna(how='all') #remove the empty lines

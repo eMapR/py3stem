@@ -24,10 +24,8 @@ var day_end = ee.Number.parse(ee.String(endDay[0]).slice(3,5))
 ////////////////////////////////////////////////////////
 
 var epochLen = 2; //adjust the length of the epoch
-var permamask_thresh = 0.75; //percent of time a pixel is masked in your study period 
-var b5_low_bound = 100; //spectral reflectance of snow/ice lower end for band 5
-var b5_high_bound = 800; //spectral reflectance of snow/ice upper end for band 5
-var ndsi_bound = 0.5; //snow/not snow threshold for ndsi 
+var permamask_thresh = 0.9; //percent of time a pixel is masked in your study period 
+
 ////////////////////////////////////////////////////////
 
 var startList=ee.List.sequence(startYear,endYear);
@@ -163,14 +161,6 @@ var permamask_count = (permamask_coll.select('masked').count()).divide(permamask
 var permamask_mask = permamask_count.where(permamask_count.gt(permamask_thresh),1).where(permamask_count.lt(permamask_thresh),0);
 
 //update the cloud mask
-//add a thresholded band 5 (SWIR)
-var b5_mask = function(img){
-  var b5_img = img.select('B5');
-  var b5_mask = img.addBands(b5_img.where(b5_img.gt(b5_low_bound).and(b5_img.lt(b5_high_bound)),1).where(b5_img.lt(b5_low_bound).or(b5_img.gt(b5_high_bound)),0))
-                   .set('system:time_start', img.get('system:time_start'));
-
-  return b5_mask;//
-};
 
 //add the long term permamask layer
 var count_mask = function(img){
@@ -180,48 +170,17 @@ var count_mask = function(img){
   return perma_mask;
 }; 
 
-//add a thresholded NDSI band
-var ndsi_mask = function(img){
-  var ndsi_band = img.normalizedDifference(['B2','B5'])
-                     .set('system:time_start', img.get('system:time_start'));
-
-  var ndsi_thresh = img.addBands(ndsi_band.where(ndsi_band.gt(ndsi_bound),1).where(ndsi_band.lt(ndsi_bound),0)); 
-  return ndsi_thresh;
-}; 
-
-//add ndmi threshold- not currently in use
-var ndmi_mask = function(img) {
-    var ndmi_band = img.normalizedDifference(['B4', 'B5']) // calculate normalized difference of B4 and B7. orig was flipped: ['B7', 'B4']
-                //.select([0], ['NDMI']) // name the band
-                .set('system:time_start', img.get('system:time_start'));
-    var ndmi_thresh = img.addBands(ndmi_band.where(ndmi_band.gt(0.75),1).where(ndmi_band.lt(0.75),0));
-
-    return ndmi_thresh;
-};
 //add indices to SR collection- takes original SR collection as input
 var collection_w_masks = function(ic){
-  var collection_w_indices=ic.map(b5_mask)
-                                        .map(count_mask)
-                                        .map(ndsi_mask)
-                                        .map(ndmi_mask)
-                                        .select(['B1','B2','B3','B4','B5','B7','unmasked','masked','B5_1','masked_1','nd','nd_1'],
-                                        ['B1','B2','B3','B4','B5','B7','unmasked','masked','shortwave_mask','perma_mask','ndsi_mask','ndmi_mask']);
+  var collection_w_indices=ic.map(count_mask)
+                             .select(['B1','B2','B3','B4','B5','B7','unmasked','masked','masked_1'],
+                                    ['B1','B2','B3','B4','B5','B7','unmasked','masked','perma_mask']);
   return collection_w_indices;
 }; 
-//combine ndsi and B5 with permamask and then change the fmask- takes output of collection_w_masks 
+//combine the fmask with permamask- takes output of collection_w_masks 
 var masked_collection = function(img){
-  var combined_masks = (img.select('shortwave_mask').add(img.select('perma_mask').add(img.select('ndsi_mask')))); 
-  var combined_thresh = combined_masks.where(combined_masks.gte(3),1).where(combined_masks.lt(3),0); 
-  var new_mask = img.addBands(img.select('unmasked').unmask(combined_thresh.selfMask()));
-  return new_mask.select(['B1','B2','B3','B4','B5','B7','unmasked','masked','shortwave_mask','perma_mask','ndsi_mask','ndmi_mask','unmasked_1'],
-  ['B1','B2','B3','B4','B5','B7','unmasked','masked','shortwave_mask','perma_mask','ndsi_mask','ndmi_mask','new_fmask']); 
-}; 
-
-//new SR collection-takes output of masked_collection 
-var new_collection = function(img){
-  var new_img = img.updateMask(img.select('new_fmask'));
-  return new_img.select(['B1','B2','B3','B4','B5','B7']); //might need to change the bands that are selected
-}; 
+  var new_mask = (img.select('unmasked').unmask()).add(img.select('perma_mask').unmask()).selfMask();
+  return img.updateMask(new_mask);
 
 // ------ DEFINE FUNCTION TO REDUCE COLLECTION TO SINGLE IMAGE BY MEDOID -----------------
 
@@ -264,8 +223,8 @@ var buildMosaic = function(firstYear,lastYear, startDay, endDay, box, mosaicType
   var collection = getCombinedSRcollection(firstYear, lastYear, startDay,endDay, box); // get the SR collection
   //introduce new cloud masking scheme 
   var indices = collection_w_masks(collection)
-  var masked = indices.map(masked_collection)
-  var input = masked.map(new_collection)
+  var input = indices.map(masked_collection)
+  
   
   if(mosaicType == "medoid"){tmp = medoidMosaic(input, dummyCollection);} // reduce the collection to single image per year by medoid 
   else if(mosaicType == "targetDay"){tmp = targetDayMoasic(input, targetDay);} // reduce the collection to single image per year by medoid
@@ -359,6 +318,14 @@ var ndmiTransform = function(img) {
     return ndmi;
 };
 
+//B4/B5 ratio
+var gbrTransform = function(img) {
+  var gbr = img.select('B4').divide(img.select('B5')); 
+                 //not sure if these results need to be scaled- they will be weird compared to others
+                 .select([0],['GBR']) //name the band 
+                 .set('system:time_start', img.get('system:time_start')); 
+  return gbr; 
+}; 
 
 
 
@@ -414,6 +381,9 @@ var calcIndex = function(img, index, flip){
     case 'NDSI':
       indexImg = ndsiTransform(img).multiply(indexFlip);
       break;
+    case 'GBR': 
+      indexImg = gbrTransform(img).multiply(indexFlip); 
+      break; 
     case 'TCB':
       indexImg = tc.select(['TCB'])//.multiply(indexFlip);
       break;

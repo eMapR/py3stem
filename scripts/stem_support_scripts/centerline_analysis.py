@@ -9,6 +9,7 @@ from pysheds.grid import Grid
 import geopandas as gpd 
 from shapely.geometry import mapping
 import matplotlib.pyplot as plt
+import pandas as pd 
 
 class HydroTools(): 
 	def __init__(self,input_dem,input_streams_layer,output_directory): 
@@ -68,6 +69,14 @@ class CreatePourPoints():
 			objectid = full_shape.OBJECTID.iloc[x]
 			low_point=mapping(full_shape.geometry.iloc[x])['coordinates'][-1] #low point
 			pour_points.update({objectid:low_point})
+		output_df = pd.DataFrame(pour_points).T #convert dict to dataframe and transpose- two cols should now be lat/long
+		output_df.rename(columns={0:'lon',1:'lat'},inplace=True)
+		print(output_df.head())	
+		output_gpd = gpd.GeoDataFrame(
+		output_df, geometry=gpd.points_from_xy(output_df.lon, output_df.lat))
+		output_gpd.crs = 'epsg:3338' 
+		output_gpd.to_file(self.output_directory+"southern_region_pour_points_w_projection.shp")
+
 		#high_point=mapping(full_shape.geometry.iloc[x])['coordinates'][0] #high point
 		#print(low_point)
 		#print(high_point)
@@ -137,10 +146,12 @@ def main():
 		output_directory = variables['output_directory']
 		input_shapefile=variables['input_shapefile']
 		pour_points=CreatePourPoints(input_shapefile,output_directory).get_end_vertices()
-		print(pour_points[25021])
+		#print(pour_points[25021])
+		#print(pour_points)
+		#print(type(pour_points))
 		#dem=MakeWatersheds(input_dem,output_directory).get_dem_and_infill()
 		print('success')
-		MakeWatersheds(input_dem,output_directory).make_watersheds(pour_points[25021])
+		#MakeWatersheds(input_dem,output_directory).make_watersheds(pour_points[25021])
 		#HydroTools(input_dem,input_streams_layer,output_directory).calc_elev_above_stream_euc()
 		#clean_center_line_raster(input_streams_layer,output_directory)
 if __name__ == '__main__':

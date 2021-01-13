@@ -1,5 +1,5 @@
 import os
-import sys
+import sys 
 from osgeo import ogr 
 import json 
 from osgeo import gdal
@@ -40,6 +40,7 @@ import re
 import glob
 import pyParz
 import make_plots
+
 def rasterize(shp,resolution,output_dest,extent_bounds): 
 	"""Convert vector to raster."""
 	input_shp = ogr.Open(shp)
@@ -57,24 +58,37 @@ def rasterize(shp,resolution,output_dest,extent_bounds):
 	ds = None
 	return output_raster
 
-def calc_zonal_stats(raster,shp,resolution,stat,source,ref_dataset,transform_info): 
+def calc_zonal_stats(raster,shp,resolution,stat,source,transform_info,class_code): 
 	"""Calculate pixel counts inside polygons."""
 	geo_df = gpd.read_file(shp)
 	try: 
 		if raster.endswith('.tif'): 
-			with rasterio.open(raster) as src: 
+			print('raster is',raster)
+			with rasterio.open(raster,'r') as src: 
 				#construct the transform tuple in the form: top left (x coord), west-east pixel res, rotation (0.0), top left northing (y coord), rotation (0.0), north-south pixel res (-1*res)
-				transform = (src.bounds[0],resolution,0.0,src.bounds[3],0.0,-1*resolution)
+				transform = (src.bounds[0],float(resolution),0.0,src.bounds[3],0.0,-1*float(resolution))
 				arr = src.read(1)#.astype('float')
-				if 'stem' in source.lower(): 
+				if ('stem' in source.lower()): 
 					#print('we are binarizing the input raster')
-					arr = np.where(arr==12,1,0)#input_arr[input_arr==12,1]
-				#arr[arr == None] = 0
-				#arr[arr == np.nan] = 0
+					print('binarizing...')
+					arr = np.where(arr==class_code,1,0)#input_arr[input_arr==12,1]
+				elif (np.max(arr)>1):  
+					print('binarizing...')
+					arr=np.where((arr>class_code) & (arr<10),1,0)
+				else:
+					print('Assuming binary data input. Changing non-one values to zero')
+					print(arr.min())
+					print(arr.mean())
+					print(arr.max()) 
+					arr[arr!=1]=0
+					arr[arr!=1.0]=0
 		else: 
+
 			arr = raster
 			transform = transform_info
 	except Exception as e: 
+		print('Entered the except statement and the error that got us here was:')
+		print(e)
 		arr = raster
 		transform = transform_info
 	#rasterstats zonal stats produces a list of dicts, get the value
@@ -152,17 +166,24 @@ def calc_confusion_matrix(*argv):#actual_source,predicted_source,stat,):
 	incorrect.columns=['actual_id','pred_id','lat','lon','actual_val','pred_val']
 	print(incorrect.shape)
 	incorrect=incorrect[incorrect['actual_val']!=incorrect['pred_val']]
-	print(incorrect)
+	false_negatives = incorrect[incorrect['actual_val']>incorrect['pred_val']]
+	false_positives = incorrect[incorrect['actual_val']<incorrect['pred_val']]
+	print(false_positives)
 	print(incorrect.shape)
 	
 
 	labels = sorted(list(set(list(actual_col)+list(predicted_col))))
 
 	results = confusion_matrix(actual_ls, predicted_ls,labels) 
+	print('#########################################')
+	print(results)
+	print(type(results))
 	#disp = plot_confusion_matrix(None,actual_ls,predicted_ls,display_labels=labels,cmap=plt.cm.Blues)
 	#fig,(ax,ax1) = plt.subplots(nrows=1,ncols=2)
 	ax=plt.subplot()
-	sns.heatmap(results,annot=True,ax=ax,fmt='g')
+	sns.heatmap(results,annot=True,ax=ax,fmt='g',vmin=0.0,vmax=400.0,cmap='Greys')
+	#ax.collections[0].colorbar.ax.set_ylim(0,400)
+
 	ax.set_xlabel('Predicted labels');ax.set_ylabel('True labels')
 	ax.set_title(f'{argv[6]} {argv[10]}') 
 	ax.set_xticklabels(labels)
@@ -183,9 +204,9 @@ def calc_confusion_matrix(*argv):#actual_source,predicted_source,stat,):
 	# df = pandas.DataFrame(report).transpose()
 	plt.show()
 	plt.close('all')
-	return classification_output, incorrect
+	return classification_output, incorrect, false_positives, false_negatives
 
-def create_zonal_stats_df(stem_raster,rgi_raster,shp,resolution,output_dir,boundary,zoom,pickle_dir,read_from_pickle,stat): 
+def make_percent_change_map(stem_raster,rgi_raster,shp,resolution,output_dir,boundary,zoom,pickle_dir,read_from_pickle,stat): 
 	"""A helper function for calc_zonal_stats."""
 	head,tail = os.path.split(stem_raster)
 
@@ -432,24 +453,29 @@ class GlacierSummary():
 
 		transform = (ulx,resolution,0.0,uly,0.0,-1*resolution)
 		#get just the glacier class as a binary raster
-		input_arr[input_arr==class_code] = 1#np.where(input_arr==class_code,1,0)#input_arr[input_arr==12,1]
+		input_arr[input_arr>class_code] = 1#np.where(input_arr==class_code,1,0)#input_arr[input_arr==12,1]
 		bin_arr = input_arr
 		bin_arr[bin_arr!=1] = 0 
 		#input_arr[np.isnan(input_arr)] = 0 
 		ds2 = gdal.Open(self.mask_raster)
-		ds3 = gdal.Open(self.region)
+
+		#ds3 = gdal.Open(self.region)
 		mask_arr = ds2.ReadAsArray()
-		region_arr = ds3.ReadAsArray()
-		region_arr[region_arr!=1]=0
+		#mask_arr[np.isnan(mask_arr)] = 0 
+		if mask_arr.max() > 1: 
+			mask_arr[mask_arr>1] = 1 
+		mask_arr[mask_arr!=1] = 0
+		#region_arr = ds3.ReadAsArray()
+		#region_arr[region_arr!=1]=0
 		try: 
-			masked = bin_arr * mask_arr * region_arr
+			masked = bin_arr * mask_arr #* region_arr
 			#print(f'masked max is {masked.max()}')
 			print(masked.shape)
 			#print(masked)
 			#masked[masked<0]=0
 			ds1=None
 			ds2=None
-			ds3=None
+			#ds3=None
 			return masked,transform
 		except ValueError: 
 			print('fail')
@@ -460,6 +486,7 @@ class GlacierSummary():
 
 		mask_sum = np.sum(arr)
 		mask_area = mask_sum * spatial_res *spatial_res #change pixel count to area by multiplying 30m x 30m x pixel count
+		mask_area = mask_area/1000000
 		return mask_area
 		
 
@@ -481,7 +508,7 @@ def main():
 		variables = json.load(f)
 		
 		#construct variables from param file
-		#shapefile = variables["shapefile"]
+		shapefile = variables["shapefile"]
 		resolution = int(variables["resolution"])
 		output_dir = variables["output_dir"]
 		pickle_dir = variables["pickle_dir"]
@@ -510,15 +537,21 @@ def main():
 
 	#calculate regional total glacier area
 	# year_dict = {}
-	# for file in sorted(glob.glob(raster_dir+'*clipped.tif')): 
-	# 	print(file)
-	# 	#year = os.path.split(file)[1][:4]
-	# 	year = (os.path.split(file)[1]).split('_')[1]#.split("model_", 1)[1].split("_", 1)[0].strip()#re.search(r"model_ (\d{4})", os.path.split(file)[1]).group(1) #get the year
-	# 	print(f'year is {year}')
-	# 	glacier_arr = GlacierSummary(file,ref_raster).mask_rasters(12,resolution) #this just gets the total number of pixels for one year and one uncertainty level 
-	# 	glacier_area = GlacierSummary(None,None).mask_and_sum_rasters(glacier_arr,spatial_res)
-	# 	print(glacier_area)
-	# 	year_dict.update({year:glacier_area})
+	# for file in sorted(glob.glob(raster_dir+'*glacier_probabilities_no_low_class_vote.tif')): 
+	# 	#if 'tcb' in file: #removed 12/15/2020 because working on probabilites not nlcd
+	# 		print(file)
+	# 		#year = os.path.split(file)[1][:4]
+	# 		year = (os.path.split(file)[1]).split('_')[1]#.split("model_", 1)[1].split("_", 1)[0].strip()#re.search(r"model_ (\d{4})", os.path.split(file)[1]).group(1) #get the year
+	# 		print(f'year is {year}')
+	# 		glacier_arr = GlacierSummary(file,ref_raster,None).mask_rasters(3,resolution) #this just gets the total number of pixels for one year and one uncertainty level 
+	# 		glacier_area = GlacierSummary(None,None,None).mask_and_sum_rasters(glacier_arr[0],resolution)
+	# 		print(glacier_area)
+	# 		year_dict.update({year:glacier_area})
+	# 	#else: 
+	# 	#	print('That file was for tcb, passing')
+	# print(year_dict)
+	# output_df = pd.DataFrame(year_dict,index=range(len(year_dict)))
+	# output_df.to_csv(output_dir+'southern_region_glacier_probablities_model_no_low_class_all_years.csv')
 
 	# print(year_dict)	
 	# df = pd.DataFrame(year_dict,index=[0])
@@ -593,22 +626,58 @@ def main():
 
 	
 
-	#reclassify(nlcd_raster,nlcd_version,None)
+	#reclassify(nlcd_raster,nlcd_version,reclass_dict)
 	#nlcd_disagree_summary(stem_raster)
-	#create_zonal_stats_df(stem_raster,rgi_raster,shapefile,resolution,output_dir,boundary,zoom,pickle_dir,write_to_pickle,stat)
 	#calc_zonal_stats(nlcd_raster,random_pts,resolution,stat,'nlcd')
 	#error_arr = GeneratePoints(uncertainty_layer,None,None).get_class_size()
-
+	######################################################################################################
 	#make confusion matrix
-	calc_confusion_matrix(None,classified_raster,random_pts,resolution,stat,actual_source,predicted_source,model_run,write_to_pickle,pickle_dir,modifier,uncertainty_layer)
+	#error_stats=calc_confusion_matrix(None,classified_raster,random_pts,resolution,stat,actual_source,predicted_source,model_run,write_to_pickle,pickle_dir,modifier,uncertainty_layer)
 	
+	# #get a csv of the points that were incorrectly classified so we can see where they are located- this is the second output of the calc_confusion_matrix func
+	# error_stats[1].to_csv(output_dir+modifier.replace(' ','_')+'_incorrect_points.csv')
+	# #get csv of false positives
+	# error_stats[2].to_csv(output_dir+modifier.replace(' ','_')+'_false_positives.csv')
+	# error_stats[3].to_csv(output_dir+modifier.replace(' ','_')+'_false_negatives.csv')
+	#####################################################################################################
 	#extract_raster_pts(nlcd_raster,random_pts,resolution)
 	# for file in glob.glob(boundary+'*.shp'): 
 	# 	rasterize(file,resolution,output_dir,ref_raster)
+	#####################################################################################################
+	#calculate zonal stats
+	zonal_stats=calc_zonal_stats(classified_raster,shapefile,resolution,stat,'rgi',None,None)
+	print(zonal_stats)
+	area=(zonal_stats*resolution*resolution)/1000000
+	#raster,shp,resolution,stat,source,transform_info,class_code):
 	t1 = datetime.now()
 	print((t1-t0)/60)
 if __name__ == '__main__':
 	main()
+# {
+# "shapefile": "/vol/v3/ben_ak/vector_files/stem_processing/rgi_cnd_tiles_southern_region_dissolve.shp",
+# "resolution": "30",
+# "output_dir":"/vol/v3/ben_ak/excel_files/error_analysis/", 
+# "pickle_dir":"/vol/v3/ben_ak/param_files/script_params/",  
+# "raster_dir":"/vol/v3/ben_ak/param_files_rgi/northern_region/output_files/",
+# "ref_raster":"/vol/v3/ben_ak/raster_files/sp_data/northern_region_sp_06_thresh_55_times_high_certainty_final_extent.tif",
+# "nlcd_raster":"/vol/v3/ben_ak/raster_files/glacier_velocity/rgi_cnd_tiles_southern_region_dissolve.tif", 
+# "classified_raster":"/vol/v3/ben_ak/param_files_rgi/southern_region/output_files/models_2017_year_nlcd_original_2016_full_run_vote.tif", 
+# "hist_raster":"/vol/v3/ben_ak/raster_files/glacier_velocity/2001_gte_5_reprojected_epsg_3338_30m.tif", 
+# "boundary":"/vol/v3/ben_ak/raster_files/climate_region_rasters/", 
+# "zoom":"/vol/v3/ben_ak/vector_files/ifsar_processing/rgi_cnd_tiles_northern_region_dissolve.shp", 
+# "random_pts":"/vol/v3/ben_ak/vector_files/uncertainty_layers/2001_gte_10_rgi_nlcd_reclassify_class_three_only_AK_clipped.shp",
+# "uncertainty_layer":"/vol/v3/ben_ak/py3stem/ref_data/2001_gte_10_rgi_nlcd_reclassify_class_three_only_AK_clipped.csv",
+# "output_raster_dir":"/vol/v3/ben_ak/param_files_rgi/southern_region/certainty_levels_tifs/", 
+# "write_to_pickle":"true", 
+# "stat":"majority", 
+# "actual_source":"stem", 
+# "predicted_source":"2016-2017 STEM composite", 
+# "model_run":"09262020", 
+# "nlcd_version":"2016_NLCD_original_version", 
+# "reclass_value":"1",
+# "reclass_dict":"0:0,1:1,2:1,3:2,4:1,5:2,6:2,7:3",
+# "modifier":"high certainty"
+# }
 
 # df_dict = {}
 # 	for shp_file in glob.glob(boundary+'*.shp'): 

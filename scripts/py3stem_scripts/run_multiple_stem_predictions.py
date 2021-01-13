@@ -44,9 +44,9 @@ def main():
 		mosaic_script = variables['mosaic_script']
 		index = variables['index']
 	
-	param_file_list = glob.glob(param_dir+'predict_year*')
-	if index.lower() == 'ndsi': 
-		param_file_list = [x for x in param_file_list if not ('tcb' in x)] 
+	param_file_list = glob.glob(param_dir+'*prob.txt')
+	# if index.lower() == 'ndsi': 
+	# 	param_file_list = [x for x in param_file_list if not ('tcb' in x)] 
 	print(param_file_list)
 
 	# run the commands in parallel 

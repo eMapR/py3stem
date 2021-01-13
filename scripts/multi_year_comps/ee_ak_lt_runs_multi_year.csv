@@ -1,2 +1,2 @@
 seg_ind,date,run_name,ftv_list,vert_list
-NDSI,05011015,NDSI_05011015,"['NDVI', 'NBR', 'TCB', 'TCW','NDSI']",[]
+NDSI,07200920,NDSI_07200920,"['NDVI', 'NBR', 'TCB', 'TCW','NDSI','GBR']",[]

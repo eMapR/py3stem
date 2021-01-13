@@ -1,7 +1,7 @@
 {
 "input_dem":"/vol/v3/ben_ak/raster_files/centerline_analysis/dem_centerline_subset_watershed_test.tif",
 "input_streams_layer":"/vol/v3/ben_ak/raster_files/centerline_analysis/centerlines_reprojected_3338.tif",
-"output_directory": "/vol/v3/ben_ak/raster_files/centerline_analysis/", 
-"input_shapefile":"/vol/v3/ben_ak/raster_files/centerline_analysis/denali_centerlines_clipped.shp"
+"output_directory": "/vol/v3/ben_ak/vector_files/centerlines/", 
+"input_shapefile":"/vol/v3/ben_ak/vector_files/centerlines/centerlines.json"
 
 }
