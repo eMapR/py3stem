@@ -180,8 +180,8 @@ var collection_w_masks = function(ic){
 //combine the fmask with permamask- takes output of collection_w_masks 
 var masked_collection = function(img){
   var new_mask = (img.select('unmasked').unmask()).add(img.select('perma_mask').unmask()).selfMask();
-  return img.updateMask(new_mask);
-
+  return img.updateMask(new_mask).select(['B1','B2','B3','B4','B5','B7']);
+}; 
 // ------ DEFINE FUNCTION TO REDUCE COLLECTION TO SINGLE IMAGE BY MEDOID -----------------
 
 // medoid composite with equal weight among indices
@@ -320,7 +320,7 @@ var ndmiTransform = function(img) {
 
 //B4/B5 ratio
 var gbrTransform = function(img) {
-  var gbr = img.select('B4').divide(img.select('B5')); 
+  var gbr = img.select('B4').divide(img.select('B5'))
                  //not sure if these results need to be scaled- they will be weird compared to others
                  .select([0],['GBR']) //name the band 
                  .set('system:time_start', img.get('system:time_start')); 

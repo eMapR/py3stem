@@ -26,13 +26,14 @@ COEFFICIENTS = {'TCB': 1,
               'NDVI': -1,
               'NDSI': -1, 
               'TCG': -1,
+              'GBR': -1,
               'B3': 1
               }
 SCRIPT_TEMPLATE = './ee-ak-download-template-multi-year.txt'
 
 def main(lt_run_info, out_dir, script_template=None):
     
-    #read in the template and join it into oen long string
+    #read in the template and join it into one long string
     if script_template is None:
         script_template = SCRIPT_TEMPLATE
     with open(script_template) as f:

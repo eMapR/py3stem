@@ -362,7 +362,7 @@ class GeneratePoints():
 
 		#read in the raster
 		with rasterio.open(self.dif_raster) as src: 
-			arr = xr.open_rasterio(src,chunks=1000000)#1,(2917*6),(5761*6)))
+			arr = xr.open_rasterio(src,chunks='auto')#1,(2917*6),(5761*6))) #was 1000000 1/31/2021
 			profile = src.profile
 
 			print(arr.shape)
@@ -532,8 +532,8 @@ def main():
 		uncertainty_layer = variables["uncertainty_layer"]
 	t0 = datetime.now()
 	#generate random reference points
-	#pts = GeneratePoints(None,ref_raster,output_dir)
-	#output_coords = pts.select_random_pts_from_raster(1,10000) #the extra arg can be 0 or 1 currently with 0 being select anything that isn't glacier and 1 being glacier. The other number is the # of pts you want to generate
+	pts = GeneratePoints(None,ref_raster,output_dir)
+	output_coords = pts.select_random_pts_from_raster(1,50000) #the extra arg can be 0 or 1 currently with 0 being select anything that isn't glacier and 1 being glacier. The other number is the # of pts you want to generate
 
 	#calculate regional total glacier area
 	# year_dict = {}
@@ -645,9 +645,9 @@ def main():
 	# 	rasterize(file,resolution,output_dir,ref_raster)
 	#####################################################################################################
 	#calculate zonal stats
-	zonal_stats=calc_zonal_stats(classified_raster,shapefile,resolution,stat,'rgi',None,None)
-	print(zonal_stats)
-	area=(zonal_stats*resolution*resolution)/1000000
+	# zonal_stats=calc_zonal_stats(classified_raster,shapefile,resolution,stat,'rgi',None,None)
+	# print(zonal_stats)
+	# area=(zonal_stats*resolution*resolution)/1000000
 	#raster,shp,resolution,stat,source,transform_info,class_code):
 	t1 = datetime.now()
 	print((t1-t0)/60)

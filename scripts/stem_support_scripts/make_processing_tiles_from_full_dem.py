@@ -21,7 +21,7 @@ import json
 import sys
 import subprocess
 import multiprocessing
-import lthacks_py3 as lthacks
+#import lthacks_py3 as lthacks
 import json 
 
 
@@ -59,7 +59,7 @@ def make_process_cmds(tileFile,outDir,name,chunkDir):
     if not os.path.isdir(tileOutDir):
       os.mkdir(tileOutDir)
     
-    outFile = tileOutDir+'/'+tileID+'_'+name+'_temp.tif'
+    outFile = tileOutDir+'/'+tileID+'_'+name+'.tif'
     inFile = chunkDir+name+'.tif'
     #ds = gdal.Warp(output_file, input_file, xRes=resolution, yRes=resolution)
     cmd = 'gdal_translate -projwin '+coords+' -of GTiff '+inFile+' '+outFile   
@@ -86,7 +86,7 @@ def main():
   if outDir[-1] != '/':
     outDir += '/'
   #create metadata
-  lthacks.createMetadata(sys.argv, outDir)  
+  #lthacks.createMetadata(sys.argv, outDir)  
 
   # run the commands in parallel 
   pool = multiprocessing.Pool(processes=20)
